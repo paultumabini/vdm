@@ -1,0 +1,275 @@
+<script> 
+// Add Model/Trim workflow:
+// - Renders add-form content
+// - Hydrates dropdowns from global reference data
+// - Collects model/trim payloads and posts to server
+// - Refreshes table/state after successful save
+let makesList;
+let yearsList;
+let vehicleData;
+let activeUser;
+let dealersList;
+let failedImportData;
+
+
+function renderAddContentView(content) {
+  const modelSection = document.querySelector('.add-model-trim-content');
+  modelSection.innerHTML = '';
+  modelSection.insertAdjacentHTML('afterbegin', content);
+
+  const makeDropdown = document.querySelector('.manufacture');
+  const yearDropdown = document.querySelector('.year'); 
+
+  createDropdownOptions(makesList.reduce((a,c) => (a.push([c,c]), a), []), makeDropdown);
+  createDropdownOptions(yearsList.reduce((a,c) => (a.push([c,c]), a), []), yearDropdown);
+  
+
+  $('[data-toggle="tooltip"]').tooltip();
+}
+
+function renderModelContent(content) {
+  renderAddContentView(content);
+}
+
+function renderTrimContent(content) {
+  renderAddContentView(content);
+
+  const yearDropdown = document.querySelector('.year');
+  const makeDropdown = document.querySelector('.manufacture');
+  const modelDropdown = document.querySelector('.model');
+
+  [yearDropdown, makeDropdown].forEach(el => {
+    el.addEventListener('change', function () {
+      modelDropdown.innerHTML = '';
+      // modelDropdown.innerHTML = '<option disabled selected hidden>Choose...</option>'
+
+      const modelDropdownOptions = vehicleData
+        .map(({model_id, year, make, model}) => {
+          if (year === +yearDropdown.value && make === makeDropdown.value) return model;
+        })
+        .filter(v => Boolean(v));
+
+      const modelOptions = [...new Set(modelDropdownOptions)];
+
+      createDropdownOptions(modelOptions.reduce((a,c) => (a.push([c,c]), a), []), modelDropdown);
+    });
+  });
+}
+
+// Add additional model and trim field
+function additionalField(content, selector) {
+  $(selector).append(content).children().last().hide().delay(0).slideDown(300);  
+
+  $('[data-toggle="tooltip"]').tooltip();
+}
+
+// Remove additional model and trim field
+function removeAdditionalField(e) {
+  const element =  e.target.closest('section');
+  $(element).slideUp(300,function(){
+    element.remove()   
+  })
+}
+
+
+ // Add Model or Trims
+function afterAddButtonClicked() { 
+
+  const fields = document.querySelectorAll('.add-model-trim-content input,.add-model-trim-content select, .add-model-trim-content textarea');
+  
+   // check form entries validity as a guard clause
+  if (!validate(fields)) {
+    raiseAlert('danger', 'exclamation','circle', 'Please complete all fields!');
+    hideAlert(3000);
+    return;
+  } 
+
+    window.scroll({ top: 0, behavior: 'smooth' });      
+
+   
+    const submitDate = createTimeStamp();
+    const sectionTitle = document.querySelector('.section-title').textContent.trim().toLowerCase();
+    const trims = document.querySelectorAll('.trim');
+    const modelCodes = document.querySelectorAll('.model-code');
+    const packageCodes = document.querySelectorAll('.package-code');
+    const selectedModel = document.querySelector('.model');
+
+    const rowData = {};
+
+    rowData.source = document.querySelector('.source').value; 
+    rowData.year = document.querySelector('.year').value;
+    rowData.make = document.querySelector('.manufacture').value;
+    rowData.models = [...document.querySelectorAll('.model')].map(el => el.value).filter(v => Boolean(v));
+    rowData.radioYesNo = [...document.getElementsByName('inlineRadioOptions')].filter(el => el.checked)[0].value
+    rowData.submittedBy = activeUser.name
+    rowData.dateSubmitted = submitDate;
+
+     //get model code from selected year, make and model value
+    let modelID;
+
+    vehicleData.forEach(({model_id, year, make, model}) => {
+      
+      if (
+        year === +rowData.year &&
+        make.trim().toLowerCase() === rowData.make.trim().toLowerCase() &&
+        model.toString().trim().toLowerCase() === selectedModel.value.toString().trim().toLowerCase()
+      )
+        modelID = model_id;
+    });
+       
+    // validate for duplicates
+    if(isModelDuplicated(rowData.year, rowData.make, selectedModel.value ) && sectionTitle === 'model description') {        
+        raiseAlert('danger', 'exclamation','circle','Year MODEL name cannot be duplicated!');
+        hideAlert(3000);        
+        return
+    }
+        
+    if(sectionTitle === 'trim description' && isTrimDuplicated(modelID, document.querySelector('.trim')) ) {        
+        raiseAlert('danger', 'exclamation','circle', 'TRIM with same year and model cannot be duplicated!');
+        hideAlert(3000);        
+        return
+    }   
+
+    // add line loader
+      $('.modal-header').append('<div class="line__loader"></div>');      
+   
+    if (sectionTitle === 'model description') {
+      // create model ids
+      const newModelsArray = [];
+      const existingModelsArray = vehicleData.map(({model_id}) => model_id).filter(v => Boolean(v));
+      
+      rowData.models.forEach((model, i) => {
+
+      const filteredModelsArray = existingModelsArray.reduce((acc, val) => (
+        val.split('-')[0].trim().toLowerCase() === rowData.make.slice(0, 3).trim().toLowerCase() ? acc.push(val) : [],
+        acc
+        ), []); 
+
+      const returnID = createId(filteredModelsArray, `${rowData.make.slice(0, 3)}-mdl`);
+      newModelsArray.push(returnID);
+      existingModelsArray.push(returnID);
+      // update global vehicleData variable to update dropdown options
+      vehicleData.push(
+        {
+          model_id:returnID, 
+          trim_id:'',
+          source:rowData.source, 
+          year:+rowData.year,
+          make:rowData.make, 
+          model:model,
+          added_to_database:rowData.radioYesNo,
+          note:'',
+          date_added: rowData.dateSubmitted,
+          added_by:rowData.submittedBy,                   
+          audited:'No',
+          date_edited: '',
+          edited_by: '',   
+         }
+         );
+      });
+      
+      rowData.modelIDs = newModelsArray;    
+          
+      google.script.run.withSuccessHandler(() => {
+        afterSubmit(sectionTitle,fields);
+        renderModelDataTable(vehicleData);
+        $('.table-title').text('ADDED MODELS'); 
+        // remove line loader
+        $('.line__loader').fadeOut(300).delay(100).queue(function(){
+          $(this).remove().dequeue();
+        });
+
+      }).saveNewModels(rowData);    
+
+    } else {
+
+      rowData.trims = [...trims].map(el => el.value).filter(v => Boolean(v));
+      rowData.modelCodes = [...modelCodes].map(el => el.value);
+      rowData.packageCodes = [...packageCodes].map(el => el.value);
+      rowData.modelID = modelID;
+
+      const newTrimsArray = [];
+      const existingTrimsArray = vehicleData.map(({trim_id}) => trim_id).filter(v => Boolean(v));      
+
+      rowData.trims.forEach((trim,i) => {
+
+        const filteredTrimsArray = existingTrimsArray.reduce((acc, val) => (
+        val.split('-')[0].trim().toLowerCase() === rowData.make.slice(0, 3).trim().toLowerCase() ? acc.push(val) : [],
+        acc
+        ), []); 
+         
+       const returnID = createId(filteredTrimsArray, `${rowData.make.slice(0, 3)}-trm`);
+        newTrimsArray.push(returnID);
+        existingTrimsArray.push(returnID);
+
+        vehicleData.push(
+          {
+            model_id:modelID, 
+            trim_id: returnID, 
+            source:rowData.source,
+            year:+rowData.year, 
+            make:rowData.make, 
+            model:selectedModel.value,
+            trim:trim,
+            model_code: rowData.modelCodes[i],
+            package_code:rowData.packageCodes[i],
+            added_to_database:rowData.radioYesNo,
+            hot_features:'No',
+            description:'No',
+            note:'',
+            date_added: rowData.dateSubmitted,
+            added_by:rowData.submittedBy,
+            audited:'No',
+            date_edited: '',
+            edited_by: '', 
+          }
+           ); 
+      })    
+            
+      google.script.run.withSuccessHandler(() => {
+        afterSubmit(sectionTitle, fields);
+        renderTrimDataTable(vehicleData);
+         $('.table-title').text('ADDED TRIMS'); 
+          // remove line loader
+        $('.line__loader').fadeOut(300).delay(100).queue(function(){
+          $(this).remove().dequeue();
+        });
+      }).saveNewTrim(rowData);
+      
+    }
+    //remove extra fields for model or trim
+    document.querySelectorAll('.fa-minus').forEach(el => el.closest('section').remove());   
+}
+
+// Check duplicates
+function isModelDuplicated(yr, mk, mo) { 
+  return vehicleData.some(({year, make, model}) => 
+    year=== +yr 
+    && make?.toString().trim().toLowerCase() === mk?.toString().trim().toLowerCase() 
+    && model?.toString().trim().toLowerCase() === mo?.toString().trim().toLowerCase()
+  )
+}
+
+function isTrimDuplicated(id, tr) {
+  let mID;
+  let tID;
+
+    vehicleData.forEach(({model_id,trim_id,trim}) => {
+      if ( 
+        trim === tr?.value.trim()
+        && model_id === id?.trim()
+        ) {
+          mID = model_id;
+          tID = trim_id;
+      }        
+    });  
+
+  return vehicleData.some(({model_id,trim_id,trim}) =>  
+    model_id?.trim().toLowerCase() === mID?.trim().toLowerCase()    
+    && trim?.trim().toLowerCase() === tr.value?.trim().toLowerCase()
+  )
+}
+   
+   
+    
+</script>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <title> Login Form</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+    integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <script src="https://kit.fontawesome.com/a81368914c.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+  <style>
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',sans-serif;
+        box-sizing: border-box;
+        background-color: rgb(236 237 237);
+        color:#332344;
+    }     
+     .relogin:hover {
+       cursor: pointer;
+       text-decoration:underline!important;;
+     }
+  </style> 
+</head>
+ <body>
+   <div align="center" class="mt-5 container">   
+        <h3>ERROR</h3> 
+        <h5>Ooops, page not found (404)</h5>
+        <small> Please check if the url is correct or
+          <span class=" relogin text-primary" onclick="relogin(this.dataset)" data-view="<?= ScriptApp.getService().getUrl() ?>?view=login">relogin </span>
+        </small>      
+    </div>    
+</body>
+<script>
+
+  function relogin({view}){  
+     window.top.location.replace(view);
+  }
+
+</script>
+
+</html>

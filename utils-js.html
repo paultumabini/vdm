@@ -1,0 +1,381 @@
+<script>
+// Shared client utilities:
+// - form validation helpers
+// - alert/spinner rendering
+// - modal/open-close helpers
+// - table helpers used by multiple views
+class CustomValidation {
+  constructor({re,field,invalidMessage}) {
+    this.re = re
+    this.field = field
+    this.invalidMessage = invalidMessage
+  }
+
+  validate() {
+    const el = String(this.field.value).toLowerCase();
+    const value = this.re.test(el)
+
+    if(value) return (this.field.classList.remove('is-invalid'), {value, field:this.field});
+    else return (this.field.classList.add('is-invalid'), {value, field:this.field, message:this.invalidMessage});
+  }
+}
+
+// Form and inputs Validation
+function validate(fieldsToValidate) {
+  if ($('.radio-invalid-feedback').length) $('.radio-invalid-feedback').remove();
+
+  Array.prototype.forEach.call(fieldsToValidate, el => {
+    if (el.checkValidity()) el.classList.remove('is-invalid');
+    else el.classList.add('is-invalid');
+
+    if (el.type === 'select-one' && el.value === 'Choose...') el.classList.add('is-invalid');          
+    if (el.type === 'select-multiple' && el.value === 'Choose...') el.classList.add('is-invalid');          
+             
+  });
+
+    if (![...fieldsToValidate].some(el => (el.type ==='radio', el.checked))) $('.radio-group').append(
+      `
+      <div class="radio-invalid-feedback" style="color:#e10016">
+         Please select either <span style="color:#fff"> Yes </span> or <span style="color:#fff"> No </span>
+      </div>
+      `
+      )
+    else if($('.radio-invalid-feedback').length) $('.radio-invalid-feedback').remove();
+
+  return Array.prototype.every.call(fieldsToValidate, el => el.checkValidity() && !el.classList.contains('is-invalid'));
+}
+
+// After Submission
+function afterSubmit(title, fieldsInput) {
+  [...fieldsInput].forEach(el => {
+    if (el.name === 'inlineRadioOptions') el.checked = false;
+
+    if(title === 'password updated') {
+      el.value ='';
+      raiseAlert('success', 'check','circle', `Hey ${activeUser.name.replace(/\b(\w)/g, c => c.toUpperCase())}, your password has been successfully updated!`);
+      hideAlert(4000);
+    }
+  });
+
+  if(title === 'model description' || title === 'trim description') {
+    raiseAlert('success', 'check','circle', `${title.split(' ')[0].toUpperCase()} data successfully added!`);
+    hideAlert(3000);
+
+    // loadDataTable('#added-data-table');
+  }
+}
+
+// Alerts
+function raiseAlert(type,icon,iconExt,message) {
+  $('.alert-messages-wrapper').remove()
+  const alertMessage = `
+    <div class="alert-messages-wrapper">
+      <div class="alert alert-${type}">
+        <i class="fas fa-${icon}-${iconExt}" ></i>
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        <div class="message">${message}</div>
+      </div>
+    </div>
+  `
+  $('.alert-message').append(alertMessage);
+}
+
+function hideAlert(time) {
+  $('.alert-messages-wrapper, .alert-danger').each(function () {
+    $(this)
+      .fadeTo(+`${time}`, 1)
+      .slideUp(100, function () {
+        $(this).remove();
+      });
+  });
+}
+
+function loadSpinner(section) {
+  document.querySelector(`${section}`).insertAdjacentHTML('afterbegin',
+  `
+  <div id ="loadSpinner">    
+      <div class="spinner-pulse"> 
+          <i class="fa fa-spinner fa-pulse fa-3x fa-fw mt-1"></i> 
+          <br> Loading...  
+      </div>         
+  </div>
+  `
+  )
+}
+
+  // time stamp: EST
+function createTimeStamp() {
+  const date = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2,'0')} ${date.toLocaleTimeString('en-US', { hour12: false })}`;
+}
+
+// Create ids
+function createId(existingIds, prefix) {
+  const newID =
+      !existingIds || !existingIds.length
+      ? 1
+      : +existingIds.reduce((a, b) => (/\d/.test(b) ? (b = b.replace(/\D/g, '')) : (b = 0), a > +b ? a : b), 0) + 1;
+  return `${prefix}-${newID}`.toUpperCase();
+}
+
+   // create dropdowns
+function createDropdownOptions(list, dropdown) {
+  list.forEach(([value,content]) => {
+    const option = document.createElement('option');
+      option.value = value;
+      option.textContent = content;
+      dropdown.appendChild(option);
+  });
+}
+
+ // show modal
+function showModal(selector, func, arg) {
+  $('.modal ').insertAfter($('body'));
+  $(selector).modal('show'); 
+  $('.modal-dialog').draggable({ handle: '.modal-header' }); 
+  func(arg)
+}
+
+//  close modal
+function onCloseModal(selector) {
+  $(selector).on('hidden.bs.modal', function () {
+    $(this).find('.add-content').html('');
+    $(this).find('input,textarea,select').val('')
+    $(this).find('input[type="radio"]:checked').prop('checked', false);
+    $(this).find('.time-date-options').remove()
+    $(this).find('.delete-button').removeClass('delete-model-trim-btn')
+  })
+}
+
+//  tooltip for already marked-up
+ $('[data-toggle="tooltip"]').tooltip();
+
+let dataTable;
+  // create submenu 
+function renderSubmenu(section,table, editFunc, deleteFunc) {
+  section.addEventListener('mouseover', function (e) {
+    const targetElement = e.target.closest('.sM-lst');
+    const targetOffset = e.target.closest('.action-menu');
+
+      if (e.target.matches('.fa-th')){
+        $('.menu-actions').remove();
+        dataTable = table
+        
+        const {id} = targetElement.dataset;
+
+        targetElement.insertAdjacentHTML('afterbegin',
+        `
+          <div class= "menu-actions" style="top:${targetOffset.offsetTop + 20}px">                          
+            <ul>                           
+              <li data-id ="${id}" onClick="${editFunc}(this.dataset)"> 
+                <span> <i class="fa fa-pencil-square-o"></i></span>
+                <span > Edit</span>
+              </li>
+              <li data-id ="${id}" onClick="${deleteFunc}(this,dataTable)">
+                <span> <i class="fa fa-trash-o"></i></span>
+                <span>Delete</span>
+              </li>
+            </ul>
+          </div>      
+          `
+        )
+      }
+
+      if (!targetElement && !targetOffset) {
+          hideSubmenu();
+      //   $('.menu-actions').animate({ 'right': '0', 'opacity' : '0' }, 200, function() {
+      //     $(this).hide()
+      //  });       
+      }
+  });
+}
+
+// hide submenu
+function hideSubmenu() {
+  $('.menu-actions').addClass('fadeOutLeft').delay(300).queue(function(){
+   $(this).remove().dequeue();
+  });
+} 
+
+// delete Row Data
+function deleteRowData(dTable,target,deleteClassName,func,param,callback) {
+  showModal('#confirmDeleteModal',hideSubmenu,null); 
+  onCloseModal('#confirmDeleteModal')
+  $('.modal-title').text('CONFIRM')
+  $('.delete-button').addClass(deleteClassName)
+  
+  const text = $(target)
+  .find('td:not(:last-child):not(:nth-last-child(-n+5))')
+  .map(function(){
+    return $(this).text()
+    })
+  .get()
+  .join('')
+
+   $('.target-to-delete').text(text);    
+
+  $('.'+ deleteClassName).unbind().click(function(e){
+
+   if(activeUser.isRestricted || !activeUser.isAuthorized) {
+      alertRestrictedUser();
+      return;
+    }
+
+      $('.modal-header').append('<div class="line__loader"></div>'); 
+
+    google.script.run.withSuccessHandler(()=>{
+      // remove from table row
+      dTable.row(target).remove().draw();
+      $('#confirmDeleteModal').modal('hide');
+
+      $('.line__loader').fadeOut(300).delay(100).queue(function(){
+        $(this).remove().dequeue();
+      });
+
+      raiseAlert('success', 'check','circle', `'${text}' successfully deleted.`);
+      hideAlert(4000);
+
+      callback()
+
+    })[func](param)
+
+  })
+}
+
+// render circular progress
+function renderCircularProgress() {
+ $('.progress').each(function() {
+    $(this)
+      .prop('Counter', 0)
+      .animate(
+        {
+          Counter: $(this).attr('stroke-dasharray').split(',')[0],
+        },
+        {
+          duration: 1000,
+          easing: 'swing',
+          step: function (num) {
+            $(this)
+              .next('.percentage')
+              .text(`${Math.ceil(num)}%`);
+          },
+        }
+    );
+  });
+} 
+
+// datatables
+function loadDataTable(selector) {
+  const table = $(selector).DataTable({
+    stateSave: true,
+    bDestroy: true,
+    pageLength: 10,
+    lengthMenu: [
+      [5, 10, 20, 50, 100 - 1],
+      [5, 10, 20, 50, 100],
+    ],
+    //scrollY: 500,
+    scrollX: false,
+    scroller: true,
+    dom: 'lCfrtip',
+    order: [[$(selector).find("th:contains('Date Created')")[0]?.cellIndex || 0, 'desc']],
+    colVis: {
+      buttonText: '',
+      overlayFade: 0,
+      align: 'right',
+    },
+    language: {
+      lengthMenu: 'Entries:  _MENU_',
+      search: '<i class="fa fa-search"></i>',
+      searchPlaceholder: 'Search here',
+      paginate: {
+        previous: '<i class="fas fa-angle-left"></i>',
+        next: '<i class="fas fa-angle-right"></i>',
+      },
+    },
+  });
+  table
+    .columns(1)
+    .search('\\b' + '' + '\\b', true, false, true)
+    .draw(1);
+  $('.make-filter').on('change', function () {
+    table
+    .columns(1)
+    .search('\\b' + $(this).val() + '\\b', true, false, true)
+    .draw();
+  }); 
+  $('.status-filter').on('change', function () {
+    table
+    .columns(5)
+    .search('\\b' + $(this).val() + '\\b', true, false, true)
+    .draw();
+  }); 
+
+  return table;
+}
+
+function alertRestrictedUser(){
+  raiseAlert('danger', 'exclamation','circle', `Sorry ${activeUser.name.replace(/\b(\w)/g, c => c.toUpperCase())}, 
+  you're not authorized to execute this request!`);
+  hideAlert(3000);
+}
+
+const greet = () => {
+  const date = new Date();
+  const hrs = date.getHours();
+  let greeting =''
+ 
+  if (hrs < 12) greeting = 'Good Morning!';
+  if (hrs >= 12 && hrs <= 17) greeting = 'Good Afternoon!';
+  if (hrs >= 17 && hrs <= 24) greeting = 'Good Evening!';
+  return greeting
+}
+
+function animateRingHeartBeat({ringSelector,hBSelector,ringOpacity,top,scaleRing,delay,duration,iterations}){  
+  ringSelector.animate([
+    // keyframes
+    {
+      opacity: ringOpacity,
+      transform: 'scale(1)',
+      top: top,
+      offset: 0
+    },
+    {
+      opacity: 0,
+      transform: 'scale(0.995)',
+      top: top,
+      offset: .125
+    },
+    {
+      opacity: 1,
+      top: top,
+      offset: .16667
+    },
+    {
+      opacity: 0,
+      transform: `scale(${scaleRing})`,
+      top: top,
+      offset: .5
+    }
+  ], { 
+    // timing options
+    delay:delay,
+    duration: duration,
+    easing:'linear',
+    iterations: iterations
+  });
+
+  hBSelector.animate({
+    transform: ['scale(1)', 'scale(0.95)', 'scale(1)'],
+    offset: [0, 0.08333, .16667]   
+    }, {   
+    delay:delay,
+    duration: duration,
+    easing:'linear',
+    iterations: iterations
+  });
+}
+ 
+</script>

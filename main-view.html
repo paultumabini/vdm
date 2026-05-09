@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_self">
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+    integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+  <script src="https://kit.fontawesome.com/a81368914c.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+ 
+  <title>Hello, world!</title>
+  <?!= include('main-style') ?>
+
+</head>
+
+<body>
+  <div class="alert-message">
+  </div>
+
+  <div class="wrapper">
+    <nav id="sidebar">
+      <ul class="list-unstyled components">
+        <li>          
+          <a id="homeView">
+             <span><i class="fa fa-home"></i> </span> 
+             <span>Main</span>
+            </a>
+        </li>
+        <li>          
+          <a id="dashboardView">
+             <span> <i class="fa fa-dashboard"></i> </span> 
+             <span>Dashboard</span>
+            </a>
+        </li>
+        <li>
+          <a id="addEditView">
+             <span> <i class="fa fa-automobile "></i> </span> 
+             <span>Model-Trim</span>            
+            </a>
+        </li>
+        <li>
+          <a id="featuresDescriptionView">
+             <span> <i class="fa fa-clipboard"></i> </span> 
+             <span>Features-Description</span>           
+            </a>
+        </li>
+        <li>
+          <a id="failedImportView">
+             <span> <i class="fa fa-chain-broken"></i> </span> 
+             <span>Failed Import</span>            
+            </a>
+        </li>       
+      </ul>
+    </nav>
+    <header>
+      <!-- <div class="menu-btn">
+        <div>
+          <span class="line-1"></span>
+          <span class="line-2"></span>
+          <span class="line-3"></span>
+        </div>
+      </div> -->
+      <nav class=" navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container-fluid ml-4">
+          <div>
+            <a id="homeView" class="navbar">             
+            </a>
+          </div>
+          <div class="active-user">
+            <div class="user"></div>
+            <div>
+              <div class="focus-extender"></div>
+              <div class="nav-profile">
+                <div class="menu" align="center">
+                  <ul>
+                    <li>
+                      <!-- Original url to view images from gdrive -->
+                      <!-- <img src="http://drive.google.com/uc?export=view&id=1kSlgtJ_mNugqVJLxJ33lmZ1LcJpiuSIH" /> -->
+                      <img src="https://lh3.google.com/u/0/d/1kSlgtJ_mNugqVJLxJ33lmZ1LcJpiuSIH" />                    
+                      <a id="profile" onclick="loadProfileView()"  class="underline">
+                        <span>Profile</span>
+                      </a>
+                    </li>
+                    <li>
+                      <img src="https://lh3.google.com/u/0/d/1e2IDSCo_bTIj-DsWzGu3PLjqqewS4TCb" />
+                      <a id="notify-me"  class="underline">
+                        <span>Notification</span>
+                      </a>
+                    </li>
+                    <li>
+                      <img src="https://lh3.google.com/u/0/d/1pXpYWArxPa-s4RvFy7ZW_5ATfUKMJZ46" />
+                      <a id="logout"  class="underline">
+                        <span>Logout</span>
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+    <div id="content">
+      <div id="taskView">
+        <div class="font-page">
+          <div class="card-container">
+            <div class="card-container-inner">
+              <div class="card-container-content">
+                <span>Vehicle Data</span>
+                <h3>Monitoring</h3>
+              </div>
+              <div class="card-container-lower">
+                <img src="https://lh3.google.com/u/0/d/1uUfFg6SxrqrVfd_YpMVhmsW9sT0RKoPY" alt="car" class="image" />
+                <ul class="features-list">
+                  <li>Audit added models and trims</li>
+                  <li>Add hot features and description in a timely manner</li>
+                  <li>Auto notification and more!</li>
+                </ul>
+                <div class="cta-section">
+                  <span class="cta-ring"> </span>
+                  <button type="button" class="cta">Start</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('user-view') ?>
+  <?!= include('notify-setting') ?> 
+  <?!= include('utils-markup') ?> 
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+    integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous">
+  </script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"
+    integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous">
+  </script>
+ 
+  <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js" type="text/javascript"></script>
+  
+  <?!= include('utils-js') ?>
+  <?!= include('user-profile-js') ?>
+  <?!= include('model-trim-add-utils-js') ?>
+  <?!= include('model-trim-add-js') ?>
+  <?!= include('model-trim-edit-delete-js') ?>
+  <?!= include('feat-descr-view-js') ?>
+  <?!= include('notify-js') ?>  
+  <?!= include('failed-import-utils-js') ?>  
+  <?!= include('failed-import-js') ?>  
+  <?!= include('dashboard-view-js') ?>
+  <?!= include('dashboard-chart-js') ?>
+  <?!= include('main-js') ?>
+
+</body>
+
+</html>

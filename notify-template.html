@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>    
+
+    <!-- Recipient greeting is personalized (short-name special case for Samuel). -->
+    <p>
+      Hi <?= recipientName.toLowerCase()==='samuel' ? 'Sam' : recipientName ?>,      
+    </p>
+    <p style="margin-bottom: 10px">
+      These are the following <strong><?= vehicleData.length ?></strong> units added to AIM database, which may have available hot features and description to enter.   
+    </p>
+    <p> <br/> 
+       ---------------------------------------------------------------------------------------- <strong>VEHICLE INFORMATION</strong> ---------------------------------------------------------------------------------------- 
+     <br/>
+    <!-- Vehicle rows are server-rendered from notify.js payload. -->
+    <table>
+      <thead style="text-align: left;">
+        <tr>
+          <th style="padding-right: 10px;">Year:</th>
+          <th style="padding-right: 10px;">Make:</th>
+          <th style="padding-right: 10px;">Model:</th>
+          <th style="padding-right: 10px;">Trim:</th>  
+          <th style="padding-right: 10px;">Source:</th>  
+          <th style="padding-right: 10px;">Hot Features:</th>   
+          <th style="padding-right: 10px;">Description:</th>          
+          <th style="padding-right: 10px;">Added By:</th>
+          <th style="padding-right: 10px;">Date Added(EST):</th>          
+        </tr>
+      </thead>
+      <tbody>
+        <? const data = vehicleData ?>       
+        <? for (let i = 0; i < data.length; i++) { ?>
+          <tr>
+            <td style="padding-right: 10px;"><?= data[i].year ?></td>
+            <td style="padding-right: 10px;"><?= data[i].make ?></td>
+            <td style="padding-right: 10px;"><?= data[i].model ?></td>
+            <td style="padding-right: 10px;"><?= data[i].trim ?></td>
+            <td style="padding-right: 10px;"><?= data[i].source ?></td>
+            <td style="padding-right: 10px;" align="center"><? if(data[i].hot_features.toLowerCase()==='no') { ?> N <?} else { ?> Y <? } ?> </td>
+            <td style="padding-right: 10px;" align="center"><?= data[i].description.toLowerCase()==='no' ? 'N' : 'Y' ?> </td>
+            <td style="padding-right: 10px;" align="center"><?= data[i].added_by ?></td>
+            <td style="padding-right: 10px;"><?= new Date(data[i].date_added).toLocaleDateString('sv') ?></td>
+          </tr>
+        <? } ?>       
+      </tbody>
+    </table>         
+      --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------   
+      <br/>  
+    </p> 
+     <br/>  
+    <p>
+      <!-- Operational reminder keeps toggle workflow consistent after users update records. -->
+      After you've finished adding the latest hot features or descriptions, kindly switch the toggle button to "Yes" in the FEATURES-DESCRIPTION section. This ensures that these entries are automatically removed from the list when the next email is sent.
+    </p>
+
+    <p>
+     Should you have any questions or come across any inaccuracies in the list, please don't hesitate to reach out and inform me.
+    </p>
+
+     <p>
+      Thanks,<br/>
+      <span>
+        <strong> Paul </strong> <br/>        
+      </span>
+      <img
+        src="https://drive.google.com/thumbnail?id=1pxouaXIz1BkHCdUkQ45QJiLS4M8IAwN4"
+      />
+    </p>     
+    <p>
+      PS: This email is auto generated and sent according to your notification preference.
+    </p>
+
+   
+  </body>
+</html>

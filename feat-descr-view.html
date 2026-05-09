@@ -1,0 +1,91 @@
+<!-- Features/Description audit view:
+     - Progress ring + stat table summarize completion
+     - Make filter narrows table entries
+     - Switches in tbody are wired by feat-descr-view-js.html -->
+<div id="add-edit-view-section">
+  <h6 class="table-title">HOT FEATURES & DESCRIPTION</h6>  
+  <section class="hf-d-stat">
+    <div class="single-chart-hf-d-wrapper">
+      <div class="single-chart-hf-d">
+        <span class="start-ring-sm"> </span>
+        <svg viewBox="0 0 36 36" class="circular-progress">
+          <defs>
+            <linearGradient id="gradientHFD" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#b72bc7" />
+              <stop offset="100%" stop-color="#00fbff"/>
+            </linearGradient>
+          </defs>
+
+          <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <path
+            class="progress active"
+            stroke-dasharray="0, 0"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            stroke="url(#gradientHFD)"
+          />
+
+          <text x="18" y="20.35" class="percentage">0</text>
+        </svg>    
+      </div>  
+     </div>
+
+    <table class="table hf-d-stat-table">
+      <thead class="hf-d-stat-table-header">
+        <tr>                 
+          <th></th>
+          <th>Yes</th>                   
+          <th>No</th>         
+        </tr> 
+      </thead>
+      <tbody>
+        <tr>
+          <td>Hot Features</td>
+          <td>0</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>Description</td>
+          <td>0</td>
+          <td>0</td>
+        </tr>       
+      </tbody>
+    </table>
+  </section>    
+  <center>
+    <table>
+      <tbody>
+        <tr class="feat-desc">
+          <td class="make-dropdown">
+            <label class="font-weight-bold">Make </label>
+            <select class="make-filter">             
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </center>
+  <section class="features-description-content">
+    <table id="features-description-table" class="table table-hover">    
+      <thead class="table-header">
+        <tr>                 
+          <th>Year</th>
+          <th>Make</th>                   
+          <th>Model</th>
+          <th>Trim</th>  
+          <th>Model Code</th>
+          <th>Pkg Code</th> 
+          <th>Source</th>                   
+          <th>Hot Features?</th>             
+          <th>Description?</th>
+          <th>Date Added</th>
+        </tr> 
+      </thead>
+      <tbody id="features-description-tbody" > 
+      </tbody>              
+    </table>
+  </section>
+</div>
+
+
+
+

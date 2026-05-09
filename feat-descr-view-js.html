@@ -1,0 +1,163 @@
+<script>  
+  // Features/Description audit module:
+  // - Renders trim-level switches for hot features + description completion
+  // - Persists toggle changes immediately
+  // - Supports filtering/stat refresh for auditing progress
+  function renderFeaturesDescription(addedData) {  
+    const filteredTrimData = addedData.filter(({ trim_id }) => Boolean(trim_id)).sort((a,b)=> a.date_added < b.date_added? 1 : -1)
+        
+     const tBody = document.getElementById('features-description-tbody');       
+     tBody.innerHTML = '';           
+
+     const makeDropdown =  [...new Set(addedData.map(({make}) => make).filter(v => Boolean(v)))].sort((a,b)=> a > b ? 1 : -1); 
+     const makeDropdownElement = document.querySelector('.make-filter');
+     makeDropdownElement.innerHTML =`<option value="">ALL</option>`
+
+     createDropdownOptions(makeDropdown.reduce((a,c) => (a.push([c,c]), a), []), makeDropdownElement);
+
+     const formatDate = date => new Date(date).toLocaleDateString('sv');
+
+     const markup =  filteredTrimData
+        .map(data => {
+
+          const audit = data.audited.toLowerCase() === 'yes'? `<span class="fas text-success">&#xf00c;</span>` : `<span class="fas text-danger">&#xf00d;</span>`
+          return ` <tr>
+                    <td> ${data.year} </td> 
+                    <td> ${data.make} </td>                    
+                    <td> ${data.model} </td>                    
+                    <td> ${data.trim} </td> 
+                    <td> ${data.model_code} </td>                    
+                    <td> ${data.package_code} </td> 
+                    <td> ${data.source} </td> 
+                    <td> 
+                      <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" data-identifier="${data.trim_id}-FEAT"  data-make="${data.make}" id="${data.trim_id}-FEAT" ${data.hot_features ==='Yes'?'checked':''} />
+                        <label class="custom-control-label" for="${data.trim_id}-FEAT">${data.hot_features}</label>
+                      </div>
+                    </td>                       
+                    <td> 
+                      <div class="custom-control custom-switch">                      
+                        <input type="checkbox" class="custom-control-input" data-identifier="${data.trim_id}-DESC" data-make="${data.make}" id="${data.trim_id}-DESC" ${data.description ==='Yes'?'checked':''}/>
+                        <label class="custom-control-label" for="${data.trim_id}-DESC">${data.description}</label>
+                      </div>
+                    </td> 
+                     <td> ${formatDate(data.date_added)} </td>                                       
+                  </tr>                 
+              `;
+        })
+        .join('');
+      
+      tBody.insertAdjacentHTML('afterbegin',markup);    
+      
+
+       countHotFeaturesDescription();
+
+       updateHotFeaturesDescription();
+
+     // data table should be rendered last so that the click event will work on other pages
+       loadDataTable('#features-description-table'); 
+
+      animateRingHeartBeat({
+        ringSelector: document.querySelector('.start-ring-sm'),
+        hBSelector: document.querySelector('.circular-progress'),
+        ringOpacity: 0,
+        top:'10px',
+        scaleRing:1.4,
+        delay:0,
+        duration:5000,
+        iterations:1
+      })
+  }
+
+
+
+ function updateHotFeaturesDescription() {
+    //check checked boxes
+        const editHotFeatDescStat = (target, label) => {
+          const {identifier, make} = target.dataset;
+          const splitId  = identifier.split('-');
+          const extractColName = splitId.pop();
+          const id = splitId.join('-');  
+
+           // update global variable
+            vehicleData.forEach(obj => {
+              if(extractColName === 'FEAT' && obj.trim_id === id) obj.hot_features = label
+              if(extractColName === 'DESC' && obj.trim_id === id) obj.description = label               
+            });
+               
+        //  $('.spinner-pulse-saved').remove();
+          
+         target.parentNode.insertAdjacentHTML(
+          'afterbegin', 
+         `<span class="spinner-pulse-saved"> <i class="fa fa-spinner fa-pulse fa-2x fa-fw mt-1"></i> </span>`
+         )
+
+          google.script.run.withSuccessHandler(()=>{
+            
+           $('.spinner-pulse-saved').remove();
+           target.parentNode.insertAdjacentHTML('afterbegin', `<span class="fas text-success check-saved">&#xf00c;</span>`);
+           $('.check-saved').fadeTo(1000,1).slideUp(100,function() { $(this).remove()});
+
+            countHotFeaturesDescription();
+
+          }).saveHotFeaturesDescriptionStat(id,extractColName,make,label,activeUser.name, createTimeStamp())
+        }
+
+
+        document.querySelectorAll('.custom-control-input').forEach(element => {
+          element.addEventListener('change', function(e) {              
+
+            if(e.target.checked) (element.labels[0].textContent = 'Yes', editHotFeatDescStat(e.target, 'Yes')) 
+            else(element.labels[0].textContent = 'No', editHotFeatDescStat(e.target, 'No'));
+          
+          })
+        })   
+  }
+
+  function countHotFeaturesDescription() {
+   // percent
+    const objData =  hotFeaturesDescriptionCount();           
+    const {
+            hotFeatures: { Yes: hFYes },
+            hotFeatures: { No: hFNo },
+            description: { Yes: dYes },
+            description: { No: dNo },
+          } = objData;                  
+ 
+    const computedHF = Math.round(((-(hFNo?.count ?? 0) / (hFYes?.count )) + 1) * 100)
+    const computedD =  Math.round(((-(dNo?.count ?? 0) / (dYes?.count)) + 1) * 100)
+    const percent =  Math.floor((computedHF + computedD)/2)         
+
+    document.querySelector('.progress').setAttribute('stroke-dasharray',`${percent},100`);
+    document.querySelector('.percentage').textContent = percent;   
+
+    // table 
+    const countedData = [
+        [hFYes?.count ?? 0, hFNo?.count ?? 0],
+        [dYes?.count  ?? 0, dNo?.count  ?? 0]
+    ]  
+       
+    countedData.forEach((data,i) => {
+      data.forEach((d,j) => {
+         document.querySelectorAll(`.hf-d-stat-table tr td:nth-of-type(${2 + j})`)[i].textContent = d
+      })
+    })
+   
+     renderCircularProgress();
+  }
+
+
+  function hotFeaturesDescriptionCount() {
+    return vehicleData
+      .filter(({ trim_id,hot_features,description },i) => Boolean(trim_id))
+      .reduce((acc,{ hot_features,description})=> {
+        acc.hotFeatures[hot_features] ??= {count:0}
+        acc.hotFeatures[hot_features].count++
+        acc.description[description] ??= {count:0}
+        acc.description[description].count++
+        
+        return acc;
+    },{hotFeatures:{},description:{}})    
+  }
+
+</script>

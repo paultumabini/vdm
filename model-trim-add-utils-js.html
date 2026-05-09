@@ -1,0 +1,179 @@
+<script>
+  // HTML template strings used by add-model/add-trim modal renderer.
+  // Kept as constants so form structure is centralized and reusable.
+  const modelContent = `
+     <div class="form-row mt-4"> 
+      <div class="form-group col-md-4">
+        <label for="source" class="font-weight-bold" >Source</label>
+        <select class="form-control source"  multiple required>
+          <option disabled selected hidden > Choose...</option>
+          <option value="carbook" >carbook</option>
+          <option value="file" >file</option>
+          </select>
+        <div class="invalid-feedback">
+          Please select source
+        </div>
+      </div>    
+      <div class="form-group col-md-4">
+        <label for="year" class="font-weight-bold" >Year</label>
+        <select class="form-control year" multiple required>
+          <option disabled selected hidden > Choose...</option>
+          </select>
+        <div class="invalid-feedback">
+          Please select year
+        </div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="manufacture"class="font-weight-bold" >Make</label>
+        <select class="form-control manufacture" multiple required>
+          <option disabled selected hidden > Choose...</option>
+          </select>
+        <div class="invalid-feedback">
+          Please select make
+        </div>
+      </div>
+    </div>
+    <div class="model-section">
+      <section class="additional-field">
+        <div class="form-group">
+          <label for="model" class="font-weight-bold">Model</label>
+            <span class="btn-group model-btn red-tooltip more-model"  data-placement="top" data-toggle="tooltip" data-original-title="Add model field" role="group">               
+              <a type="button" class="btn btn-success btn-sm more-model"><i class="fas fa-plus field"></i></a>                     
+            </span> 
+          <input type="text" class="form-control model" required> 
+          <div class="invalid-feedback">
+            Please provide model
+          </div>   
+        </div>
+      </section>      
+    </div>
+    <div class="form-group radio-group">
+      <label class="font-weight-bold" >Already added to database?</label> <br>
+      <div class="form-check form-check-inline">
+        <input id="yes" class="form-check-input added-yes" type="radio" name="inlineRadioOptions" value="Yes" required>
+        <label class="form-check-label" for="yes">Yes</label>
+      </div>
+      <div class="form-check form-check-inline ml-2">
+        <input id="no" class="form-check-input added-no" type="radio" name="inlineRadioOptions"  value="No" required>
+        <label class="form-check-label" for="no">No </label>
+      </div>             
+    </div>    
+ `
+
+ let additionalModel = `
+   <section class="additional-field">
+    <div class="form-group">
+      <label for="model" class="font-weight-bold">Model</label>
+        <span class="btn-group model-btn red-tooltip"  role="group">               
+          <a type="button" class="btn btn-danger btn-sm minus-model" data-placement="top" data-toggle="tooltip" data-original-title="Remove model field"><i class="fas fa-minus field"></i></a> 
+          <a type="button" class="btn btn-success btn-sm more-model" data-placement="top" data-toggle="tooltip" data-original-title="Add model field"><i class="fas fa-plus field"></i></a>                    
+       </span>
+      <input type="text" class="form-control model" required> 
+      <div class="invalid-feedback">
+        Please provide model
+      </div>   
+    </div>
+   </section>
+ `
+
+  const trimContent =  `
+    <div class="form-row mt-4"> 
+        <div class="form-group col-md-2">
+          <label for="source" class="font-weight-bold" >Source</label>
+          <select class="form-control source" multiple required>
+            <option disabled selected hidden > Choose...</option>
+            <option value="carbook" >carbook</option>
+            <option value="file" >file</option>
+            </select>
+          <div class="invalid-feedback">
+            Select source
+          </div>
+        </div>     
+        <div class="form-group col-md-2">
+          <label for="year" class="font-weight-bold" >Year</label>
+          <select class="form-control year" multiple required>
+            <option disabled selected hidden > Choose...</option>
+            </select>
+          <div class="invalid-feedback">
+            Select year
+          </div>
+        </div>
+        <div class="form-group col-md-4">
+          <label for="dealername"class="font-weight-bold" >Make</label>
+          <select class="form-control manufacture" multiple required>
+            <option disabled selected hidden > Choose...</option>
+            </select>
+          <div class="invalid-feedback">
+            Select make
+          </div>
+        </div>
+        <div class="form-group col-md-4">
+          <label for="dealername"class="font-weight-bold" >Model</label>
+          <select class="form-control model" multiple required>
+            <option disabled selected hidden > Choose...</option>
+            </select>
+          <div class="invalid-feedback">
+            Select model
+          </div>
+        </div>
+      </div>
+    <div class="trim-section">
+      <section class="additional-field">
+        <div class="form-group">
+          <label for="trim" class="font-weight-bold">Trim</label>
+            <span class="btn-group trim-btn red-tooltip  more-trim"  data-placement="top" data-toggle="tooltip" data-original-title="Add trim field" role="group">               
+              <a type="button" class="btn btn-success btn-sm more-trim"><i class="fas fa-plus field"></i></a>                     
+            </span>
+          <input type="text" class="form-control trim" required>
+            <div class="invalid-feedback">
+              Please provide trim
+            </div>              
+        </div>
+        <div class="form-group">
+          <label for="model-code" class="font-weight-bold">Model Code</label>
+          <input type="text" class="form-control model-code">    
+        </div>   
+        <div class="form-group">
+          <label for="package-code" class="font-weight-bold">Package Code</label>
+          <input type="text" class="form-control package-code" >   
+        </div>
+      <section>      
+    </div>
+    <div class="form-group radio-group">
+      <label class="font-weight-bold" >Already added to database?</label> <br>
+      <div class="form-check form-check-inline">
+        <input id="yes" class="form-check-input  added-yes" type="radio" name="inlineRadioOptions" value="Yes" required>
+        <label class="form-check-label" for="yes">Yes</label>
+      </div>
+      <div class="form-check form-check-inline ml-2">
+        <input id="no" class="form-check-input  added-no" type="radio" name="inlineRadioOptions"  value="No" required>
+        <label class="form-check-label" for="no">No </label>
+      </div>             
+    </div>     
+  `
+ 
+let additionalTrim = `
+  <section class="additional-field">
+    <div class="form-group">
+      <label for="trim" class="font-weight-bold">Trim</label>
+       <span class="btn-group trim-btn red-tooltip"  data-placement="top" role="group">               
+          <a type="button" class="btn btn-danger btn-sm minus-trim" data-toggle="tooltip" data-original-title="Remove trim field" ><i class="fas fa-minus field"></i></a> 
+          <a type="button" class="btn btn-success btn-sm more-trim" data-placement="top" data-toggle="tooltip" data-original-title="Add trim field"><i class="fas fa-plus field"></i></a>        
+        </span>
+      <input type="text" class="form-control trim" required >
+        <div class="invalid-feedback">
+             Please provide trim
+        </div> 
+    </div>
+    <div class="form-group">
+      <label for="model-code" class="font-weight-bold">Model Code</label>
+      <input type="text" class="form-control model-code">
+    </div>
+    <div class="form-group">
+      <label for="package-code" class="font-weight-bold">Package Code</label>
+      <input type="text" class="form-control package-code" >
+    </div>    
+  <section>
+   `
+    
+</script>

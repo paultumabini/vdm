@@ -1,0 +1,315 @@
+<script>
+// Dashboard metric composer:
+// - Aggregates vehicle + failed-import datasets
+// - Computes percentages/counts for cards and chart inputs
+// - Renders dashboard cards and passes monthly series to chart module
+
+function renderDashboardProgressChart() {
+  // Build a normalized list of available years from both primary datasets.
+  const allYears = [
+    ...vehicleData.map(({date_added}) => new Date(date_added).getFullYear()).filter(Number.isFinite),
+    ...failedImportData.map(({date_added}) => new Date(date_added).getFullYear()).filter(Number.isFinite),
+  ];
+  const availableYears = [...new Set(allYears)].sort((a, b) => a - b);
+  const defaultYear = availableYears.length ? availableYears[0] : new Date().getFullYear();
+
+  const yearSelect = document.getElementById('dashboard-year-filter');
+  if (yearSelect) {
+    yearSelect.innerHTML = availableYears.length
+      ? availableYears.map((year) => `<option value="${year}">${year}</option>`).join('')
+      : `<option value="${defaultYear}">${defaultYear}</option>`;
+  }
+
+  function renderDashboardByYear(selectedYear) {
+    // Clear previous carousel/interval state before drawing a new year view.
+    if (autoChange) clearInterval(autoChange);
+    document.querySelectorAll('.circular-progress-links li').forEach((el) => el.remove());
+
+    // Failed Import (filtered by selected year).
+    const filterfailedImportData = failedImportData.filter(({date_added}) => new Date(date_added).getFullYear() === selectedYear)
+    const {done} = filterfailedImportData.reduce((acc,{status}) => (acc[status] ? acc[status]++ : acc[status] = 1 ,acc), {})
+
+    // Models/trims/description/hotFeatures (same selected year filter).
+    const filterDataByDateCreated = vehicleData.filter(({date_added}) => new Date(date_added).getFullYear() === selectedYear)
+    const {models,trims} = filterDataByDateCreated.reduce((acc,{trim_id,date_added,audited,description,hot_features}) => (
+      !trim_id
+        ? (
+          acc.models.dateAdded.push(date_added),
+          acc.models.audited.push(audited)
+        )
+        : (
+          acc.trims.dateAdded.push(date_added),
+          acc.trims.audited.push(audited),
+          acc.trims.description.push(description),
+          acc.trims.hotFeatures.push(hot_features)
+        )
+      ,acc
+    ),{models:{dateAdded:[],audited:[]},trims:{dateAdded:[],audited:[],description:[], hotFeatures:[]}})
+
+    const modelAuditPercentage = percentAudited(models.audited);
+    const trimAuditPercentage = percentAudited(trims.audited);
+
+    const hotFeatureCount = trims.hotFeatures.reduce((acc, value) => (acc[value] = (acc[value] || 0) + 1, acc), {});
+    const descriptionCount = trims.description.reduce((acc, value) => (acc[value] = (acc[value] || 0) + 1, acc), {});
+
+    // Failed import series for chart card/slider.
+    const failedImport = filterfailedImportData.reduce((acc,{date_added,audited}) => (
+      acc.dateAdded.push(date_added),
+      acc.audited.push(audited),
+      acc
+    ),{dateAdded:[],audited:[]})
+
+    const safePercent = (num, den) => den ? Math.round((num / den) * 100) : 0;
+    const safeYesNoPercent = (yesCount, noCount) => safePercent(yesCount, (yesCount || 0) + (noCount || 0));
+
+    const progressData = [
+      ['Models', modelAuditPercentage],
+      ['Trims', trimAuditPercentage],
+      ['Hot Features', safeYesNoPercent(hotFeatureCount.Yes || 0, hotFeatureCount.No || 0)],
+      ['Description', safeYesNoPercent(descriptionCount.Yes || 0, descriptionCount.No || 0)],
+      ['Failed Import', safePercent(done ?? 0, filterfailedImportData.length)],
+    ];
+
+    const chartMarkUp = progressData
+      .map(([title, value],i) => {
+        return `
+      <li class="single-chart">
+        <span class="start-ring"> </span>
+        <svg viewBox="0 0 36 36" class="dashboard circular-progress">
+          <defs>
+            <linearGradient id="gradient${i}" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="rgba(183, 43, 199, 0.50)" />
+              <stop offset="100%" stop-color="rgba(0, 251, 255, 0.50)"/>
+            </linearGradient>
+          </defs>
+
+          <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <path
+            class="progress"
+            stroke-dasharray="${value}, 100"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            stroke="url(#gradient${i})"
+          />
+
+          <text x="18" y="20.35" class="percentage">${value}</text>
+        </svg>
+        <div class="progress-title">${title}</div>
+      </li>
+      `;
+      })
+      .join('');
+
+    document.querySelector('.circular-progress-links').insertAdjacentHTML('afterbegin', chartMarkUp);
+    renderCircularProgress();
+
+    autoSlide(
+      [
+        {dateAdded:models.dateAdded, values:models.audited},
+        {dateAdded:trims.dateAdded, values:trims.audited},
+        {dateAdded:trims.dateAdded, values:trims.description},
+        {dateAdded:trims.dateAdded, values:trims.hotFeatures},
+        {dateAdded:failedImport.dateAdded, values:failedImport.audited}
+      ],
+      [
+        modelAuditPercentage,
+        trimAuditPercentage,
+        safeYesNoPercent(descriptionCount.Yes || 0, descriptionCount.No || 0),
+        safeYesNoPercent(hotFeatureCount.Yes || 0, hotFeatureCount.No || 0),
+        safePercent(done ?? 0, filterfailedImportData.length)
+      ],
+      [
+        'Models',
+        'Trims',
+        'Description',
+        'Hot Features',
+        'Failed Import',
+      ],
+      selectedYear
+      );
+
+    renderDashboardChart({dateAdded:models.dateAdded, values:models.audited}, modelAuditPercentage, selectedYear)
+  }
+
+  if (yearSelect) {
+    yearSelect.value = String(defaultYear);
+    yearSelect.onchange = function () {
+      renderDashboardByYear(Number(this.value));
+    };
+  }
+
+  // Default selection requested: oldest available year.
+  renderDashboardByYear(defaultYear);
+}
+
+//set global setInterval to kill at different sections
+let autoChange; 
+
+function autoSlide(modelTrimArr,auditArr,legendArr,selectedYear) {
+  const links = document.querySelectorAll('.circular-progress-links li svg');
+  if (!links.length) return;
+  links[0].closest('li').classList.add('active'); 
+  links[0].querySelector('.progress').classList.add('active');
+  // start ring and heartbeat
+  animateRingHeartBeat({
+    ringSelector: links[0].closest('li').querySelector('.start-ring'),
+    hBSelector: links[0].closest('li').querySelector('.circular-progress'),
+    ringOpacity:0,
+    top:'95px',
+    scaleRing:1.3,
+    delay:0,
+    duration:4000,
+    iterations:1
+  })
+
+  $('.legend-audit').hide().fadeIn(600)
+
+    // auto slider
+  const delay = 3000; //ms  
+  const maxSlide = links.length
+  let current = 1;
+  let previous;
+  
+  autoChange = setInterval(changeSlide, delay);
+
+  function changeSlide() {  
+    if (current < maxSlide) { 
+      //chart
+      renderDashboardChart(modelTrimArr[current], auditArr[current], selectedYear)
+
+      $('.legend-audit').text(legendArr[current]).hide().fadeIn(600) 
+      const tableHeader = document.querySelectorAll('.audit-stat-table-header tr th:nth-of-type(n+2)')
+        if(current === 2 || current === 3) {
+          tableHeader.forEach((el,i) => {
+            el.textContent = ['Number','Added'][i]
+          }) 
+        } else {
+          tableHeader.forEach((el,i) => {
+            el.textContent = ['Added','Audited'][i]
+          }) 
+        }
+      // animate opacity,line
+      links[0].closest('li').classList.remove('active');
+      links[previous]?.closest('li').classList.remove('active');
+      links[current].closest('li').classList.add('active');
+      // animate counter
+      links[0].querySelector('.progress').classList.remove('active');
+      links[previous]?.querySelector('.progress').classList.remove('active');
+      links[current].querySelector('.progress').classList.add('active');
+      reRunCounter(links[current].querySelector('.progress'))
+      // start ring and heartbeat
+      animateRingHeartBeat({
+        ringSelector: links[current].closest('li').querySelector('.start-ring'),
+        hBSelector: links[current].closest('li').querySelector('.circular-progress'),
+        ringOpacity:0,
+        top:'95px',
+        scaleRing:1.3,
+        delay:0,
+        duration:4000,
+        iterations:1
+      })
+
+      previous = current;
+      current ++;           
+    } else {
+      current = 1
+      links[previous]?.closest('li').classList.remove('active');
+      links[0].closest('li').classList.add('active'); 
+      // animate counter
+      links[previous]?.querySelector('.progress').classList.remove('active');
+      links[0].querySelector('.progress').classList.add('active');
+      reRunCounter(links[0].querySelector('.progress'))      
+      // start ring and heartbeat
+      animateRingHeartBeat({
+        ringSelector: links[0].closest('li').querySelector('.start-ring'),
+        hBSelector: links[0].closest('li').querySelector('.circular-progress'),
+        ringOpacity:0,
+        top:'95px',
+        scaleRing:1.3,
+        delay:0,
+        duration:4000,
+        iterations:1
+      })
+
+       // chart 
+      renderDashboardChart(modelTrimArr[0], auditArr[0], selectedYear)
+      $('.legend-audit').text(legendArr[0]).hide().fadeIn(600) 
+    }       
+  }
+  
+  function restartSetInterval() {    
+    autoChange = setInterval(changeSlide, delay);
+    current++
+  };
+
+  function pauseSetInterval() {
+    clearInterval(autoChange);
+  }
+
+  links.forEach((el, i) => {
+    ['mouseenter','mouseleave'].forEach(evt => {
+      el.addEventListener(evt, function (e) {       
+        if (e.type === 'mouseenter') {
+          //chart   
+           renderDashboardChart(modelTrimArr[i], auditArr[i], selectedYear)
+          $('.legend-audit').text(legendArr[i]) 
+          const tableHeader = document.querySelectorAll('.audit-stat-table-header tr th:nth-of-type(n+2)')
+            if(i === 2 || i === 3) {
+              tableHeader.forEach((el,i) => {
+                el.textContent = ['Number','Added'][i]
+              }) 
+            } else {
+              tableHeader.forEach((el,i) => {
+                el.textContent = ['Added','Audited'][i]
+              }) 
+            }
+          // animate opacity,line
+          links[0].closest('li').classList.remove('active');
+          links[previous]?.closest('li').classList.remove('active');
+          e.target.closest('li').classList.add('active');
+          // animate counter
+          links[0].querySelector('.progress').classList.remove('active');
+          links[previous]?.querySelector('.progress').classList.remove('active');
+          e.target.querySelector('.progress').classList.add('active');   
+          reRunCounter(e.target.querySelector('.progress'))  
+          // start ring and heartbeat
+          animateRingHeartBeat({
+            ringSelector: e.target.closest('li').querySelector('.start-ring'),
+            hBSelector: e.target.closest('li').querySelector('.circular-progress'),
+            ringOpacity:0,
+            top:'95px',
+            scaleRing:1.3,
+            delay:0,
+            duration:4000,
+            iterations:1
+          })      
+
+          current = i
+          previous = i; 
+          pauseSetInterval()
+        } else {         
+          restartSetInterval();
+        }           
+      });
+    });
+  });
+
+  function reRunCounter(selector) {  
+    $(selector)
+      .prop('Counter', 0)
+      .animate(
+        {
+          Counter: $(selector).attr('stroke-dasharray').split(',')[0],
+        },
+        {
+          duration: 1000,
+          easing: 'swing',
+          step: function (num) {
+            $(selector)
+              .next('.percentage')
+              .text(`${Math.ceil(num)}%`);
+          },
+        }
+    );        
+  }  
+}
+</script>

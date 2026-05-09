@@ -1,0 +1,18 @@
+# Clasp — script ID is environment-specific; keep local
+.clasp.json
+
+# Dependencies (if you add a package.json later)
+node_modules/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Logs and env files
+*.log
+.env
+.env.*

@@ -1,0 +1,100 @@
+<script>
+  // Login page behavior:
+  // - Animated form intro + focus state styling
+  // - Password visibility toggle
+  // - Client-side required field validation
+  // - Server login request + success/error UI handling
+  const img = new Image();
+  img.onload = function() { 
+      $('#loadSpinner').remove(); 
+      $('form').addClass('scale-in-center'); 
+    }
+  img.src = "https://lh3.google.com/u/0/d/1uUfFg6SxrqrVfd_YpMVhmsW9sT0RKoPY"; 
+
+    
+  const inputs = document.querySelectorAll('.input');
+  function action(e) {
+    const parent = e.target.parentNode.parentNode;
+    if (e.type === 'focus') parent.classList.add(this);
+    if (e.type === 'blur' && e.target.value == '') parent.classList.remove(this);
+  }
+
+  inputs.forEach(
+    input => 
+    (
+    input.addEventListener('focus', action.bind('focus')), 
+    input.addEventListener('blur', action.bind('focus'))
+    )
+  );
+
+  // password viewer    
+  const btn = document.querySelector('.password-input')
+  const eyes = document.querySelector('.eyes')
+  const openEye = document.querySelector('.fa-eye')
+  const slashEye = document.querySelector('.fa-eye-slash')
+
+  eyes?.addEventListener('click', function(e){
+      const input = this.previousSibling.previousSibling
+    if(input.type ==='password') {          
+      openEye.style.visibility='hidden'
+      slashEye.style.visibility = 'visible'
+      input.type = 'text' 
+    } else {
+      slashEye.style.visibility = 'hidden'
+      openEye.style.visibility='visible'
+      input.type = 'password'          
+    }
+  })
+            
+
+    document.querySelector('.login')?.addEventListener('click', function() {       
+
+      const {fields,validate,missingField}  = inputsValidation();
+
+        // check form entries validity as a guard clause
+      if (!validate) {        
+        raiseAlert('danger', 'exclamation','circle', `Please complete all fields!\n  ${missingField}`);
+        hideAlert(3000);
+        return;
+      }     
+
+       $('.login').html(`<span class="spinner-pulse-btn"> <i class="fa fa-spinner fa-pulse fa-2x fa-fw mt-1"></i> </span>`)     
+
+      const userPassInput = [...fields].reduce((acc,el)=> {
+        acc[el.name] = el.value
+        return acc;
+        }, {}) 
+
+        userPassInput.timeStamp = createTimeStamp();   
+     
+      google.script.run.withSuccessHandler(function({view,user}){
+        if(view === 'invalid')  {
+         $('.login').html(`Log In`)  
+            raiseAlert('danger', 'exclamation','circle', 'Invalid login. Note that both fields may be case-sensitive.');
+            hideAlert(3000);
+        } else {
+            raiseAlert('success', 'check','circle', `Login Success! Redirecting...`);
+             window.top.location.replace(view);            
+        }               
+        
+      }).login(userPassInput)      
+    })   
+
+
+    function inputsValidation() {
+      const fields = document.querySelectorAll('input');
+      const validate = Array.prototype.every.call(fields, el => el.checkValidity());
+      const invalidFields = Array.prototype.map.call(fields, el => {
+        if(!el.checkValidity()) {
+          return el.name.replace(/\b(\w)/g, c => c.toUpperCase())
+        }             
+        }).filter(v => Boolean(v));
+      
+
+      const missingField =  !invalidFields || !invalidFields.length ? '' : invalidFields.length > 1 ? `*Missing: ${invalidFields.join('&')}` : `*Missing: ${invalidFields.join('')}`
+
+      return {fields,validate,missingField}
+    }  
+    
+      
+</script>

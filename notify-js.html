@@ -1,0 +1,166 @@
+<script>
+ // Notification settings module:
+ // - Renders immediate/preferred/disabled options
+ // - Builds day/time selector for preferred schedule
+ // - Persists notification config and trigger ids server-side
+ function renderNotification(arg){    
+   const options = document.querySelector('.fieldset-notification');
+   const form = document.querySelector('.notification-content');      
+   const days = [ 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                 .reduce((a,c) => (a.push([c,c[0].toUpperCase() + c.slice(1,3)]), a), []);
+
+     
+    // notification type   
+    ['disabled','immediate','preferred'].forEach((el,i)=> {
+      if(activeUser.notification === el) {
+          form.elements.notificationOptions[i].checked = true          
+      }     
+    })    
+    
+     if(activeUser.notification ==='preferred') {
+        renderTimeDayOptions(days);
+     }  
+
+    // focus events
+    form.elements.notificationOptions.forEach(el => {
+      el.addEventListener('focus', function (e) {
+         if(e.target.matches('#preferred')) {      
+           
+           if($('.time-date-options').length) return
+
+           renderTimeDayOptions(days);
+
+         } else {           
+            $('.time-date-options').slideUp(200, function () {
+              $(this).remove();       
+            });        
+         }
+      })
+    })     
+ }
+
+  function renderTimeDayOptions(days) {
+     const markUp = `
+      <ul class="time-date-options">
+        <li>
+          <div class="font-weight-bold">
+            Day/s
+          </div>
+          <div class="mt-1 days-of-the-week">   
+            ${
+              days.map(([key,value]) => 
+              ` 
+                <div class=" form-check-inline">
+                  <input class="form-check-input" type="checkbox"  name= "day-time" id="${key}" ${activeUser.notificationDay?.length && activeUser.notificationDay.includes(key)? 'checked' : ''}>
+                  <label class="form-check-label" for="monday">${value}</label>
+                </div>    
+              `
+              ).join('')
+            }                             
+          </div> 
+        </li>
+        <li>
+          <div class="mt-2">
+              <label  class="font-weight-bold time-picker" for="timepicker">Time(EST): 
+               <i style="position:relative; top: -5px;"
+               class="fa fa-question-circle fa-1x red-tooltip" data-placement="top" data-toggle="tooltip" 
+               data-original-title="Time is set to EST. Schedule may not fire on the exact selected time. For example, it may fire between 8am-9am if a schedule is set for 8am.">
+               </i>
+              </label>  
+              <select name ="timepicker" class="timepicker">
+                <option disabled selected hidden >Select...</option>                
+              </select>                 
+          </div>
+        </li>
+      </ul>  `
+       
+
+     $('.fieldset-notification').append(markUp).children().last().hide().delay(0).slideDown(300);  
+       //  tooltip
+     $('[data-toggle="tooltip"]').tooltip();
+            //  render hours time option
+      const hoursDropdown = document.querySelector('.timepicker');
+
+      const hours = Array.from({ length: 24 }, (_, i) =>
+                    i + 1 < 12
+                      ? { [i + 1]: `${i + 1}`.padStart(2, '0') + ':00 am' }
+                      : i + 1 > 12 && i + 1 < 24
+                      ? { [i + 1]: `${i - 11}`.padStart(2, '0') + ':00 pm' }
+                      : i + 1 === 24
+                      ? { [i + 1]: `${i - 11}`.padStart(2, '0') + ':00 am' }
+                      : { [i + 1]: `${i + 1}`.padStart(2, '0') + ':00 pm' }
+                  );
+      createDropdownOptions(hours.flatMap(a => Object.entries(a)), hoursDropdown)
+      hoursDropdown.selectedIndex = activeUser.notificationTime
+   }
+
+   function afterSetNotificationBtnClicked() {
+     const form = document.querySelector('.notification-content');  
+     const selected = [...form].filter(el => el.checked)[0].id   
+     const option = {}
+
+     option.optionId = selected   
+     option.userId = activeUser.id  
+     option.triggerClockId = activeUser.triggerClockId
+
+     if(selected ==='preferred'){
+      option.selectedDayTime = preferredNotification();     
+      if (!option.selectedDayTime.is_validated) return
+     }      
+     
+     $('.modal-header').append('<div class="line__loader"></div>'); 
+     google.script.run.withSuccessHandler(notification => {
+
+       $('.line__loader').fadeOut(300).delay(100).queue(function(){
+            $(this).remove().dequeue();
+         });
+    
+        activeUser.notification = notification.type;
+        activeUser.notificationDay = notification.days ? notification.days : [];
+        activeUser.notificationTime = notification.time ? notification.time : '';
+        activeUser.triggerClockId =  notification.triggerId ? notification.triggerId : [];        
+      
+       raiseAlert('success', 'check','circle', `Notification preference is successfully updated!`);    
+       hideAlert(4000);      
+     
+     }).selectedNotification(option)
+   }
+
+    // preferred notification
+   function preferredNotification() {
+     const days = document.querySelectorAll('input[name="day-time"]');
+     const time = document.querySelector('.timepicker');
+     const dt = {}
+
+     if(![...days].some(el=>el.checked) || time.selectedIndex === 0) {
+       raiseAlert('danger', 'exclamation','circle', 'Please select day/s or time');
+        hideAlert(3000);
+        dt.is_validated = false;
+     } else {
+       dt.is_validated = true;
+       dt.days = [...days].filter(el=>el.checked).map(day => day.id)
+       dt.time = +time.value
+     }          
+     return dt
+   }
+
+
+   // immediate notification
+   function immediateNotification(arg){  
+
+     $('.immediate-notify-btn').unbind().click(function(e){
+         
+        $('.modal-header').append('<div class="line__loader"></div>'); 
+
+        google.script.run.withSuccessHandler(email => {
+          $('.line__loader').fadeOut(300).delay(100).queue(function(){
+                $(this).remove().dequeue();
+            });    
+          raiseAlert('success', 'check','circle', `immediate notification  is sent to: ${email.join(',')}`);    
+          hideAlert(4000);      
+        
+        }).immediateContentNotification();
+      }) 
+   }
+
+</script>

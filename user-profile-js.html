@@ -1,0 +1,182 @@
+<script>
+  // Nav Profile Image
+// Profile module:
+// - Handles hover/click interactions for profile menu
+// - Renders user profile fields in modal
+// - Validates username/email/password updates
+// - Calls server updates and refreshes active-user UI state
+function renderProfileMenu() {
+  const profile = document.querySelector('.profile');
+  const profileMenu = document.querySelector('.menu');
+  const focusExtend = document.querySelector('.focus-extender');
+  const targetElements = [profile, profileMenu, focusExtend];
+
+  const mouseEvents = {
+    mouseover: 'add',
+    mouseout: 'remove',
+    click: 'add',
+  };
+
+  targetElements.forEach(el => {
+    Object.entries(mouseEvents).forEach(([event, action]) => {
+      el.addEventListener(`${event}`, function (e) {
+        profileMenu.style.display = 'block';
+        profileMenu.classList[action]('active');
+        if (e.type === 'mouseover') {
+          focusExtend.classList.add('active');
+          profileMenu.classList.add('active');
+        }
+        if (e.type === 'mouseout' && focusExtend.classList.contains('active')) {
+          focusExtend.classList.remove('active');
+        }
+      });
+    });
+  });
+}
+
+function renderProfileContent(user) {
+// password viewer
+
+   const lastLoggedIn = new Intl.DateTimeFormat('en-US', {year: 'numeric', month: 'short', day: '2-digit',}).format(new Date(activeUser.lastLoggedIn)) +', '+ new Date(activeUser.lastLoggedIn).toLocaleTimeString();  
+   
+   document.querySelector('.last-logged').textContent = lastLoggedIn +' '+ '(EST)' 
+   const form = document.querySelector('.profile-content');   
+   
+   [...form.elements].forEach(el => el.classList.remove('is-invalid'));
+
+   form.elements.username.value = user.name;
+   form.elements.email.value = user.email;   
+
+   const checkBox = document.querySelector('#show-pass') 
+   const inputPassword = [form.elements.currentPassword, form.elements.password1, form.elements.password2]; 
+
+   checkBox.addEventListener('click', function(e) {
+    inputPassword.forEach(el => {
+      if(this.checked) el.type ='text'             
+      else el.type ='password'             
+    })           
+  })
+  
+  validation(form);
+}
+
+function validation(form) { 
+  const username = {
+    re: /(.*[a-zA-Z0-9]){3}/,
+    field: form.elements.username,
+    invalidMessage: 'Minimum 3 characters username(letter or number only)',
+  }
+  const email = {
+    re: /\S+@\S+\.\S+/,
+    field: form.elements.email,
+    invalidMessage: 'Must be a valid email format',
+  }
+  const password1 = {
+    re: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/,
+    field: form.elements.password1,
+    invalidMessage: 'Minimum 8 characters password(at least one letter & one number)',
+  } 
+
+
+ form.elements.usernameEmailBtn.addEventListener('click', function(e) { 
+     e.preventDefault();
+     const isUsernameValid = new CustomValidation(username).validate();
+     const isEmailValid = new CustomValidation(email).validate(); 
+     const errorMessage = [];
+
+     if(isUsernameValid.message)errorMessage.push(isUsernameValid.message);
+     if(isEmailValid.message)errorMessage.push(isEmailValid.message);  
+     
+     if(!isUsernameValid.value || !isEmailValid.value){
+       raiseAlert('danger', 'exclamation','circle', `${errorMessage.map(val => `<div>*${val}</div>`).join('')}`);
+       hideAlert(7000);
+      return;
+     }
+
+     if(activeUser.isRestricted) {
+      alertRestrictedUser();
+      return;	
+     }
+     
+     $('.modal-header').append('<div class="line__loader"></div>');     
+
+    google.script.run.withSuccessHandler(({username, email})=> {
+       activeUser.name = username;
+       activeUser.email = email;  
+
+       $('.line__loader').fadeOut(300).delay(100).queue(function(){
+          $(this).remove().dequeue();
+       });   
+          
+       raiseAlert('success', 'check','circle', `Hey ${activeUser.name.replace(/\b(\w)/g, c => c.toUpperCase())}, your username or email has been successfully updated!`);
+       hideAlert(4000);   
+       $('.user' ).text(`${greet()} ${activeUser.name.replace(/\b(\w)/g, c => c.toUpperCase())}`);        
+
+    }).updateNewUsernameEmail({id:activeUser.id, username:username.field.value, email:email.field.value})
+  })
+
+  form.elements.passwordBtn.addEventListener('click', function(e) { 
+     e.preventDefault();
+     const isPassword1Valid = new CustomValidation(password1).validate();      
+     const errorMessage = [];      
+     form.elements.currentPassword.classList.remove('is-invalid');
+
+     if(!isPassword1Valid.value){
+       errorMessage.push(isPassword1Valid.message)
+     }    
+
+     if(form.elements.password1.value !==  form.elements.password2.value){
+       form.elements.password1.classList.add('is-invalid');
+       form.elements.password2.classList.add('is-invalid');
+       errorMessage.push('Passwords did not match')
+     }
+     
+     if (errorMessage.length) {
+       raiseAlert('danger', 'exclamation','circle',`${errorMessage.map(val => `<div>*${val}</div>`).join('')}`);
+       hideAlert(7000);
+       return;
+     } else {
+       Array.from(form.elements).forEach(el => el.classList.remove('is-invalid'));
+
+    if(activeUser.isRestricted) {
+      alertRestrictedUser();
+      return;	
+    }
+
+    $('.modal-header').append('<div class="line__loader"></div>'); 
+      
+    google.script.run.withSuccessHandler(({status})=> {
+      if (status === 'invalid-current-password') {
+        form.elements.currentPassword.classList.add('is-invalid');
+        $('.line__loader').fadeOut(300).delay(100).queue(function(){
+          $(this).remove().dequeue();
+        });
+        raiseAlert('danger', 'exclamation','circle', 'Invalid Current Password');
+        hideAlert(4000);
+        return;
+      }
+      if (status !== 'ok') {
+        $('.line__loader').fadeOut(300).delay(100).queue(function(){
+          $(this).remove().dequeue();
+        });
+        raiseAlert('danger', 'exclamation','circle', 'Unable to update password');
+        hideAlert(4000);
+        return;
+      }
+
+        $('.line__loader').fadeOut(300).delay(100).queue(function(){
+            $(this).remove().dequeue();
+         });
+
+      afterSubmit('password updated', [form.elements.currentPassword, form.elements.password1, form.elements.password2])   
+    }).updatePassword({
+      id: activeUser.id,
+      currentPassword: form.elements.currentPassword.value,
+      password: form.elements.password1.value
+    })
+     }      
+  })
+}
+
+
+</script>

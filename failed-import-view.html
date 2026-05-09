@@ -1,0 +1,245 @@
+<!-- Failed Import operations view:
+     - Shows status distribution + filtered data table
+     - "Add" opens create modal
+     - Edit/Delete actions are injected by failed-import-js.html -->
+<div id="failed-import-view-section">
+  <h6 class="table-title">FAILED IMPORT</h6>
+  <section class="f-i-stat">
+    <div class="single-chart-f-i-wrapper">
+      <div class="single-chart-f-i">
+        <span class="start-ring-sm"> </span>
+        <svg viewBox="0 0 36 36" class="circular-progress">
+          <defs>
+            <linearGradient id="gradient7" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#b72bc7" />
+              <stop offset="100%" stop-color="#00fbff"/>
+            </linearGradient>
+          </defs>
+
+          <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <path
+            class="progress active"
+            stroke-dasharray="50, 0"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            stroke="url(#gradient7)"
+          />
+
+          <text x="18" y="20.35" class="percentage">50</text>
+        </svg>    
+      </div>  
+     </div>
+
+    <table class="table f-i-stat-table">
+      <thead class="f-i-stat-table-header">   
+        <tr>                 
+          <th></th>
+          <th></th> 
+        </tr>      
+      </thead>
+      <tbody>
+        <tr>
+          <td>Pending</td>
+          <td>0</td>        
+        </tr>
+        <tr>
+          <td>Working</td>
+          <td>0</td>          
+        </tr>  
+        <tr>
+          <td>Done</td>
+          <td>0</td>          
+        </tr>     
+      </tbody>
+    </table>
+  </section>   
+  <div class="mt-3">
+    <button class="btn btn-info btn-sm add-failed-import-btn">Add</button>    
+  </div>  
+  <center>
+    <table>
+      <tbody>
+        <tr>
+          <td class="status-dropdown">
+            <label class="font-weight-bold">Status </label>
+            <select class="status-filter"> 
+               <option value="" > ALL</option>
+               <option value="pending" >Pending</option>
+               <option value="working" >Working</option>            
+               <option value="done">Done</option>            
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </center>
+  <section class="failed-import-content">
+    <table id="failed-import-table" class="table table-hover">    
+      <thead class="table-header">
+        <tr> 
+          <th>DealerID</th>
+          <th>Dealer</th> 
+          <th>Source</th>                   
+          <th>Stock#</th>                   
+          <th>Fail Reason</th> 
+          <th>Status</th> 
+          <th>Created</th>             
+          <th>Date Created</th>                   
+          <th></th>
+        </tr> 
+      </thead>
+      <tbody id="failed-import-tbody" > 
+      </tbody>              
+    </table>
+  </section>
+</div>
+
+<div class="modal fade" id="addFailedImport">
+    <div class="modal-dialog modalfailedImport modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title"></h6>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            </div>
+            <div class="container"></div>
+            <div class="modal-body content">
+              <form class="failedImportContent">               
+              </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-sm submit-failed-import-btn" >Submit</button>               
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editFailedImport">
+  <div class="modal-dialog modalFailedImport modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"></h6>
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+      </div>
+      <div class="container"></div>
+      <div class="modal-body content">
+        <!-- add content -->
+        <form class="model-trim-content"> 
+           <div class="form-row">
+              <div class="form-group col-md-2 mb-2">
+                <label for="dealer_id" class="font-weight-bold" >Dealer ID</label>
+                <input name ="dealer_id" class="form-control dealer_id" readonly>                                  
+              </div>
+              <div class="form-group col-md-4 mb-2">
+                <label for="dealer_name" class="font-weight-bold" >Dealer Name</label>
+                <select name ="dealer_name" class="form-control dealer_name" required > 
+                   <option disabled selected hidden >Choose...</option>
+                </select>  
+                <div class="invalid-feedback">
+                  Please add dealer name
+                </div>                
+              </div>
+              <div class="form-group col-md-3 mb-2">
+                <label for="source_type" class="font-weight-bold" >Source</label>
+                <input type="text" name ="source_type" class="form-control source_type" required> 
+                <div class="invalid-feedback">
+                  Please add source
+                </div>
+              </div>
+              <div class="form-group col-md-3 mb-2">
+                <label for="stock_number" class="font-weight-bold" >Stock#</label>
+                <input type="text" name ="stock_number" class="form-control stock_number" required> 
+                <div class="invalid-feedback">
+                  Please add stock#
+                </div>
+              </div>
+            </div> 
+            <div class="form-row">              
+              <div class="form-group col-md-2 mb-2">
+                <label for="year" class="font-weight-bold" >Year</label>
+                <input type="text" name ="year" class="form-control year" required> 
+                <div class="invalid-feedback">
+                  Please add year
+                </div>                
+              </div>
+              <div class="form-group col-md-4 mb-2">
+                <label for="make" class="font-weight-bold" >Make</label>
+                <input type="text" name ="make" class="form-control make" required> 
+                <div class="invalid-feedback">
+                  Please add year
+                </div>                
+              </div>
+              <div class="form-group col-md-3 mb-2">
+                <label for="model" class="font-weight-bold" >Model</label>
+                <input type="text" name ="model" class="form-control model"required >   
+                <div class="invalid-feedback">
+                  Please add model
+                </div>              
+              </div> 
+              <div class="form-group col-md-3 mb-2">
+                <label for="trim" class="font-weight-bold" >Trim</label>
+                <input type="text" name ="trim" class="form-control trim" required>   
+                <div class="invalid-feedback">
+                  Please add trim
+                </div>              
+              </div> 
+            </div>
+            <div class="form-row">
+              <div class="form-group col-md-3 mb-2">
+                <label for="fail_reason" class="font-weight-bold" >Fail Reason</label>
+                <select name ="fail_reason" class="form-control fail_reason" required />       
+                  <option disabled selected hidden >Choose...</option>
+                  <option value="make not found">Make not found</option>
+                  <option value="model not found">Model not found </option>
+                  <option value="transmission not found">Transmission not found </option>
+                </select>    
+                <div class="invalid-feedback">
+                  Please select fail reason
+                </div>
+              </div> 
+              <div class="form-group col-md-3 mb-2">
+                <label for="status" class="font-weight-bold" >Status</label>
+                <select name ="status" class="form-control status" required />  
+                  <option value="pending">Pending</option>
+                  <option value="working">Working </option>
+                  <option value="done">Done</option>
+                </select>    
+                <div class="invalid-feedback">
+                  Please select status
+                </div>
+              </div>               
+            </div> 
+            <div class="form-row">
+              <div class="form-group col-md-3 mb-2">
+                <label for="date_added" class="font-weight-bold" >Date Added</label>
+                <input type="text" name ="date_added" class="form-control date_added" readonly>  
+              </div> 
+              <div class="form-group col-md-3 mb-2">
+                <label for="added_by" class="font-weight-bold" >Added by</label>
+                <input type="text" name ="added_by" class="form-control added_by" readonly>  
+              </div>              
+              <div class="form-group col-md-3 mb-2">
+                <label for="date_edited" class="font-weight-bold" >Date Edited</label>
+                <input type="text" name ="date_edited" class="form-control date_edited" readonly>                               
+              </div>
+              <div class="form-group col-md-3 mb-2">
+                <label for="edited_by" class="font-weight-bold" >Edited by</label>
+                <input type="text" name ="edited_by" class="form-control edited_by" readonly>  
+              </div>
+            </div>
+            <div class="form-row"> 
+              <div class="form-group col-md-6 mb-3">
+                  <label for="note"  class="font-weight-bold" > Note</label>
+                  <textarea name="note" class="form-control note" rows="2"></textarea>
+              </div>
+              <div class="form-group col-md-6 mb-3">
+                  <label for="solution"  class="font-weight-bold"> Solution</label>
+                  <textarea name="solution" class="form-control solution" rows="2"></textarea>
+              </div>
+            </div>            
+        </form>        
+      </div>
+      <div class="modal-footer">  
+         <button class="btn btn-primary btn-sm mr-4 edit-failed-import-btn" >Save</button>      
+      </div>
+    </div>
+  </div>
+</div>

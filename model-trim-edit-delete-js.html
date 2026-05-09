@@ -1,0 +1,279 @@
+<script>
+// Model/Trim table module:
+// - Renders table rows for model and trim sections
+// - Builds action submenu for edit/delete
+// - Handles inline save/delete server calls + row refresh
+// - Applies filter/table redraw hooks
+const renderYesNoIcon = value => value.toLowerCase() === 'yes'
+  ? `<span class="fas text-success">&#xf00c;</span>`
+  : `<span class="fas text-danger">&#xf00d;</span>`
+
+
+const renderTableHeader = (...header) => {
+  return`
+    <table id="added-data-table" class="table  table-hover">    
+      <thead class="table-header">
+        <tr>                
+          ${header.map(h => `<th>${h}</th>`).join('')}
+        </tr> 
+      </thead>
+      <tbody id="added-data-tbody" > 
+      </tbody>              
+  </table> 
+  `     
+} 
+
+const renderTableRows = (data,section,...header) => {
+  const filteredModelTrimData = section === 'trimSection'
+  ? data.filter(({ trim_id }) => Boolean(trim_id))
+  : data.filter(({ trim_id }) => Boolean(!trim_id))  
+
+  const contentSection = document.querySelector('.view-content')
+  contentSection.innerHTML  =''
+  contentSection.insertAdjacentHTML('afterbegin', renderTableHeader(...header));     
+  const tBody = document.getElementById('added-data-tbody');       
+  tBody.innerHTML = ''; 
+
+  const makeDropdown = [...new Set(data.map(({make}) => make).filter(v => Boolean(v)))].sort((a,b)=> a > b ? 1 : -1);
+  const makeDropdownElement = document.querySelector('.make-filter');
+  makeDropdownElement.innerHTML =`<option value="">ALL</option>`
+
+  createDropdownOptions(makeDropdown.reduce((a,c) => (a.push([c,c]), a), []), makeDropdownElement);
+
+  //  const formatDate = date => new Date(date).toISOString().replace(/T.*/,'')
+  const formatDate = date => new Date(date).toLocaleDateString('sv');
+  
+  const markup =  filteredModelTrimData
+    .sort((a,b)=> a.date_added < b.date_added? 1 : -1)
+    .map(data => {
+      return ` <tr>
+                <td> ${data.year} </td> 
+                <td> ${data.make} </td>                    
+                <td> ${data.model} </td>
+                ${   
+                  section === 'trimSection'
+                  ?
+                  `<td> ${data.trim} </td> 
+                    <td> ${data.model_code}</td>                    
+                    <td> ${data.package_code}</td>`
+                  : ''
+                }   
+                <td> ${data.source} </td>                     
+                <td> ${renderYesNoIcon(data.added_to_database)} </td>              
+                <td align="right"> 
+                    <div class="custom-control custom-switch">
+                      <input type="checkbox" class="custom-control-input"                       
+                      data-make="${data.make}" 
+                      data-id="${section === 'trimSection' ? data.trim_id : data.model_id }"
+                      id="${section === 'trimSection' ? data.trim_id : data.model_id }" 
+                      ${data.audited ==='Yes'?'checked':''} 
+                      />
+                      <label class="custom-control-label" 
+                      for="${section === 'trimSection' ? data.trim_id : data.model_id }">
+                        ${data.audited}
+                      </label>
+                    </div>
+                </td> 
+                <td> ${data.added_by.replace(/\b(\w)/g, c => c.toUpperCase())} </td> 
+                <td> ${formatDate(data.date_added)} </td>                    
+                <td  class="action-menu">                   
+                  <a href="#" class ="sM-lst" data-id="${section !== 'trimSection'? data.model_id : data.trim_id}" >
+                    <i class="fa fa-th"></i>                                                      
+                  </a>                       
+                </td>                    
+              </tr>                 
+          `;
+    })
+    .join('');
+
+  tBody.insertAdjacentHTML('afterbegin',markup); 
+
+  //update Audited status and must be rendered before datatable does, so that an event will work o the folling pages
+  updateAuditedStatus(section)
+
+  dataTableModelTrim = loadDataTable('#added-data-table');      
+  
+
+   //render submenu action
+  renderSubmenu(document.getElementById('taskView'),dataTableModelTrim,'editModelTrimRowData','deleteModelTrimRowData'); 
+
+  //immediate notification btn
+  if(activeUser.isAuthorized) {
+    if($('.fire-immediate-notification-btn').length) return
+    $('.action-buttons').append(`<button class="btn btn-danger btn-sm fire-immediate-notification-btn">Notify?</button> `)       
+  }
+ }
+
+ 
+function renderModelDataTable(addedData) {  
+  renderTableRows(addedData,'modelSection', 'Year','Make','Model','Source','Added-DB','Audited','Submitted','Date Created','')
+}
+
+function renderTrimDataTable(addedData) { 
+  renderTableRows(addedData,'trimSection','Year','Make','Model','Trim','Model Code','Pkg Code','Source','Added-DB','Audited','Submitted','Date Created','');      
+} 
+
+/* After DataTable being rendered*/
+function updateAuditedStatus(section) {
+  document.querySelectorAll('.custom-control-input').forEach(element => {
+
+     //restrict unauthorized user to do audit by disabling the toogle button
+      if(!activeUser.isAuthorized) {
+      element.disabled = true;
+      return;	
+       } 
+
+    element.addEventListener('change', function(e) {   
+      if(e.target.checked) (element.labels[0].textContent = 'Yes', updateStatus(e.target, 'Yes', section)) 
+      else(element.labels[0].textContent = 'No', updateStatus(e.target, 'No', section));    
+    })
+  })
+
+  // Audited status button
+  function updateStatus (target, label, section) {
+    const {id, make} = target.dataset;
+     
+    // update global variable
+    vehicleData.forEach(obj => {
+      if(section === 'modelSection' && obj.model_id === id) obj.audited = label
+      if(section === 'trimSection' && obj.trim_id === id) obj.audited = label               
+    });
+          
+   $('.spinner-pulse-saved').remove();
+    
+    target.parentNode.insertAdjacentHTML(
+    'afterbegin', 
+    `<span class="spinner-pulse-saved"> <i class="fa fa-spinner fa-pulse fa-2x fa-fw mt-1"></i> </span>`
+    )
+
+    $('.spinner-pulse-saved').css('left', '-15px');   
+
+    google.script.run.withSuccessHandler(()=>{
+      
+      $('.spinner-pulse-saved').remove();
+      target.parentNode.insertAdjacentHTML('afterbegin', `<span class="fas text-success check-saved" style="left: -5px">&#xf00c;</span>`);
+      $('.check-saved').fadeTo(1000,1).slideUp(100,function() { $(this).remove()});     
+
+    }).saveAuditedStatus(id, make, label, activeUser.name, createTimeStamp(),section)
+  } 
+}
+
+function editModelTrimRowData({id}) {  
+  showModal('#editModelTrim',hideSubmenu,null); 
+  onCloseModal('#editModelTrim')  
+
+  $('.edit-model-trim-btn').attr('data-id',id);
+
+  const tableName = document.querySelector('.table-title');
+  const form = document.querySelector('.model-trim-content');
+  const fieldDisabled = arg => ['trim','model_code','package_code','hot_features','description'].forEach(el => form.elements[el].disabled = arg);
+  const filteredModelData =  vehicleData.filter(({ trim_id }) => Boolean(!trim_id))
+  .filter(({model_id}) => model_id === id)
+  .map(({source,year,make,model,added_to_database,note,date_added,added_by,date_edited,edited_by,date_audited,audited_by}) => 
+  ({source,year,make,model,added_to_database,note,date_added,added_by:added_by?.toUpperCase(),date_edited,edited_by:edited_by?.toUpperCase(),date_audited,audited_by:audited_by?.toUpperCase()}))
+
+  const filteredTrimData =  vehicleData.filter(({ trim_id }) => Boolean(trim_id))
+  .filter(({trim_id}) => trim_id === id)
+  .map(({source,year,make,model,trim,model_code,package_code,hot_features,description,added_to_database,note,date_added,added_by,date_edited,edited_by,date_audited,audited_by}) => 
+  ({source,year,make,model,trim,model_code,package_code,hot_features,description,added_to_database,note,date_added,added_by:added_by?.toUpperCase(),date_edited,edited_by:edited_by?.toUpperCase(),date_audited,audited_by:audited_by?.toUpperCase()}))
+  
+  fieldDisabled(false); 
+
+  if(tableName.textContent.trim().toLowerCase() === 'added models') {
+    $('.modal-title').text('EDIT MODEL')
+    fieldDisabled(true);
+    form.elements.model.disabled = false  
+    //render values to form   
+    Object.entries(filteredModelData[0]).forEach(([key,val]) => form.elements[key].value = val);
+    //add values to global variable and make changes to interface
+    afterEditButtonClicked(form,col='model','model_id',renderModelDataTable,updated='Model'); 
+  } 
+  
+  if(tableName.textContent.trim().toLowerCase() === 'added trims') {
+    $('.modal-title').text('EDIT TRIM')
+    form.elements.model.disabled = true 
+    //render values to form    
+    Object.entries(filteredTrimData[0]).forEach(([key,val]) => form.elements[key].value = val);
+    //add values to global variable and make changes to interface
+    afterEditButtonClicked(form,col='trim','trim_id', renderTrimDataTable,updated='Trim');  
+  }    
+}
+
+
+function afterEditButtonClicked(form,col,targetID,func,updated){
+
+  $('.edit-model-trim-btn').unbind().click(function(e){ 
+    
+    if(activeUser.isRestricted) {
+      alertRestrictedUser();
+      return;	
+    }   
+
+    $('.modal-header').append('<div class="line__loader"></div>');   
+
+    const data = {
+          id:$(this).attr('data-id'),
+          column:col,
+          make:form.elements.make.value,
+          model:form.elements.model.value,
+          trim:form.elements.trim.value,
+          modelCode:form.elements.model_code.value,
+          packageCode:form.elements.package_code.value,
+          hotFeatures:form.elements.hot_features.value,
+          description:form.elements.description.value,
+          addedToDB:form.elements.added_to_database.value,
+          note:form.elements.note.value,
+          user:activeUser.name,
+          timeStamp:createTimeStamp()
+        } 
+
+    vehicleData.forEach(obj => { 
+      if (obj[targetID] === data.id){ 
+         {
+          obj.model=data.model,
+          obj.trim=data.trim,
+          obj.model_code= data.modelCode,
+          obj.package_code=data.packageCode,
+          obj.hot_features=data.hotFeatures,
+          obj.description=data.description,
+          obj.added_to_database=data.addedToDB,
+          obj.note=data.note,         
+          obj.date_edited=data.timeStamp,
+          obj.edited_by=data.user
+          }
+        }             
+    })    
+   
+
+    google.script.run.withSuccessHandler(()=>{
+       $('.line__loader').fadeOut(300).delay(100).queue(function(){
+          $(this).remove().dequeue();
+       });
+
+      func(vehicleData);    
+
+       raiseAlert('success', 'check','circle', `${updated} data successfully updated!`);
+       hideAlert(3000);   
+    }).saveModelTrimChanges(data);    
+   })    
+}
+
+
+function deleteModelTrimRowData(element,table) {  
+  const {id} = element.dataset
+  const targetElement = element.closest('tr');
+  const tableTitle = $('#add-edit-view-section h6.table-title').text()
+  const make = $(targetElement).find('td:nth-of-type(2)').text()
+
+  deleteRowData(table,targetElement,'delete-model-trim-btn','deleteModelTrimChanges',{id,make,tableTitle}, updateVehicleData);
+
+  function updateVehicleData() {
+    // remove from global variable
+    vehicleData.forEach((arr,i) => {
+      if(arr[`${tableTitle.trim().toLowerCase() ==='added models' ? 'model_id' : 'trim_id'}`] === id ) vehicleData.splice(i,1)
+    })
+  }   
+  
+}
+
+</script>

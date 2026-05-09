@@ -1,0 +1,354 @@
+<script>
+
+// Main page controller:
+// - Handles global click delegation for sidebar/modals/actions
+// - Loads server-rendered partial views
+// - Initializes active user + reference datasets after DOM ready
+// - Wires logout/profile/menu interactions
+function clickEventHandler() {
+  $(document).ready(function () {
+
+    $(document).click(function (event) {
+      const $target = $(event.target);
+      // event.preventDefault();
+      $('[data-toggle="tooltip"]').tooltip('hide');
+
+      if ($target.closest('.menu-btn div').length) {
+        $('#sidebar').removeClass('active');
+        $('.menu-btn').removeClass('open');
+      }
+
+      if (
+        !$target.closest('.menu-btn div').length &&
+        !$target.closest('#sidebar').length &&
+        !$target.closest('nav ul > li ').length &&
+        !$target.closest('.cta').length ||
+         $target.closest('.single-chart').length
+      ) {
+        $('#sidebar').removeClass('active');
+        $('.menu-btn').removeClass('open');
+      }   
+
+      if ($target.closest('.cta').length) {                                
+         $('#sidebar').addClass('active'); 
+         $('.menu-btn').addClass('open');
+      }    
+
+      if ($target.closest('.view-model-btn').length) {                                
+        renderModelDataTable(vehicleData);
+         $('.table-title').text('ADDED MODELS');        
+      } 
+
+      if ($target.closest('.view-trim-btn').length) {                                
+        renderTrimDataTable(vehicleData);
+        $('.table-title').text('ADDED TRIMS');              
+      } 
+
+      if ($target.closest('.add-model-trim-btn').length) {
+        showModal('#addModelTrim',renderAddContentView,modelContent);
+
+        $('.section-title').text('MODEL DESCRIPTION');
+        // modal close
+        onCloseModal('#addModelTrim')
+      }
+      // add or remove models
+      if ($target.closest('.add-model-btn').length) {
+        $('.section-title').text('MODEL DESCRIPTION')
+        renderModelContent(modelContent);
+      }
+
+      if ($target.closest('.more-model').length) {                                
+          additionalField(additionalModel,'.model-section');
+          $(".modal-body").animate({ scrollTop: $('.modal-body').height() + 2000}, 1000);
+      }    
+            
+      if ($target.closest('.minus-model').length) {                                
+            removeAdditionalField(event);  
+      } 
+      // add or remove trims
+      if ($target.closest('.add-trim-btn').length) { 
+          $('.section-title').text('TRIM DESCRIPTION')                                
+            renderTrimContent(trimContent);           
+      }   
+
+      if ($target.closest('.more-trim').length) {                                
+          additionalField(additionalTrim, '.trim-section'); 
+          $(".modal-body").animate({ scrollTop: 5000}, 1000);
+      }       
+
+      if ($target.closest('.minus-trim').length) {                                
+          removeAdditionalField(event);   
+      }     
+      // submit new models and trims   
+      if ($target.closest('.add-data-btn').length) {       
+        afterAddButtonClicked()
+       }       
+      // notify me
+      if ($target.closest('#notify-me').length) {
+        showModal('#notifyMe',renderNotification, null);
+        $('.modal-title').text('NOTIFICATION')
+        onCloseModal('#notifyMe')
+      }
+      if ($target.closest('.set-notification-btn').length) {
+        afterSetNotificationBtnClicked()
+      }
+      if ($target.closest('.fire-immediate-notification-btn').length) {
+        showModal('#immediateNotifyModal',immediateNotification, null);
+        $('.modal-title').text('CONFIRM')
+        onCloseModal('#immediateNotifyModal')
+      }
+      // fit-table-content
+      if ($target.closest('.fit-table-content-btn').length) {  
+          $('#added-data-table').toggleClass('no-wrap',600)   
+      }
+
+      // failed Import
+       if($target.closest('.add-failed-import-btn').length){
+         const form = $('form.failedImportContent')[0];
+        showModal('#addFailedImport',renderFailedImportModal, {dealersList,form});
+        $('.modal-title').text('ADD FAILED IMPORT')
+         onCloseModal('#addFailedImport')
+      }
+      if ($target.closest('.submit-failed-import-btn').length) {
+        const form = $('form.failedImportContent')[0];
+        afterSubmitFailedImportBtnClicked(form)
+      }
+    });
+  });
+}
+
+
+clickEventHandler();
+   
+
+/* Views handler */
+function loadView(options){
+  //  $('#sidebar').toggleClass('active');
+  //  $('.menu-btn').toggleClass('open');  
+  $('.head-title').remove()
+
+  loadSpinner('#taskView');
+  
+  // if set interval for audit chart exists, clear it
+  if(autoChange) clearInterval(autoChange);
+
+  const id = typeof options.id === "undefined" ? "taskView" : options.id;
+  const cb = typeof options.callback === "undefined" ? function(){} : options.callback;
+    
+  google.script.run.withSuccessHandler(function(html){
+  const pageContent = document.getElementById(id)
+
+  pageContent.innerHTML = html;      
+  
+  typeof options.arg === "undefined" ? cb() : cb(options.arg);    
+ 
+  $('#loadSpinner').remove();
+  })[options.func]();
+} 
+
+
+/* Views func handler */
+function loadhomeView() {
+  // if($('.font-page').length || $('.font-page-view-section').length) return; 
+  loadView({ func: 'loadhomeView', callback: () => {
+    $('#loadSpinner').remove() 
+
+    animateRingHeartBeat({
+      ringSelector: document.querySelector('.cta-ring'),
+      hBSelector: document.querySelector('.cta'),
+      ringOpacity: 1,
+      top:'10px',
+      scaleRing:1.5,
+      delay:0,
+      duration:3000,
+      iterations:Infinity
+    })
+
+   }
+  });     
+}
+
+function loadAddEditView() {
+  loadView({ func: 'loadAddEditView', callback: renderModelDataTable, arg: vehicleData });     
+}
+
+function loadFeaturesDescriptionView() {
+  loadView({ func: 'loadFeaturesDescriptionView', callback: renderFeaturesDescription, arg: vehicleData });     
+}
+
+function loadfailedImportView() {
+  loadView({ func: 'loadfailedImportView',callback: renderFailedImport, arg: failedImportData});     
+}
+
+function loadDashboardView() {
+  loadView({ func: 'loadDashboardView', callback: renderDashboardProgressChart }); 
+}
+
+function logout() {
+  const {id}  =  activeUser;
+  const url = new URL(window.location.href);
+  const authToken = url.searchParams.get('auth_token') || '';
+  const fallbackLogoutUrl = `${url.origin}${url.pathname}?view=logout`;
+   google.script.run.withSuccessHandler(function(view){
+     if (view) {
+       window.top.location.replace(view);
+       return;
+     }
+     window.top.location.replace(fallbackLogoutUrl);
+   }).withFailureHandler(function(){
+     // Fallback navigation keeps logout usable even when server callback errors.
+     window.top.location.replace(fallbackLogoutUrl);
+   }).logout({id:id, authToken});
+}
+// Profile
+function loadProfileView() {
+  showModal('#profileView',renderProfileContent,activeUser); 
+  $('.modal-title').text('PROFILE')       
+  onCloseModal('#profileView') 
+}
+
+/* Menu view handler */
+function initSidebar() {
+  const clickEvents = {
+    homeView: 'loadhomeView',     
+    addEditView: 'loadAddEditView',      
+    featuresDescriptionView: 'loadFeaturesDescriptionView',     
+    failedImportView: 'loadfailedImportView',     
+    dashboardView: 'loadDashboardView',     
+    logout: 'logout',     
+  }   
+
+  Object.entries(clickEvents).forEach(([id,funcName]) => {   
+    const element = document.getElementById(id)
+    if(element)element.addEventListener('click', window[funcName]) 
+  })
+}    
+
+
+document.addEventListener('DOMContentLoaded', event => {
+  loadSpinner('#taskView');
+  $('.card-container').css('opacity', 0);
+    
+    // get active user
+  google.script.url.getLocation((url) => {            
+      google.script.run.withSuccessHandler((user) => {
+        activeUser = {
+          ...user, 
+          isValidated(input,value){ 
+            return this[input] === value; 
+            },
+            greet:greet()
+          }  
+      }).getActiveUser(url.parameters.auth_token[0]) 
+  });
+
+  // get failed import data
+  google.script.run.withSuccessHandler(data => {  
+    failedImportData = data      
+  }).failedImportData();
+
+  // get reference data
+  google.script.run.withSuccessHandler(data => {
+    yearsList = data.map(([year]) => year).filter(d => Boolean(d)).sort((a, b) => (a < b ? 1 : -1));
+    makesList = data.map(([, mfg]) => mfg).filter(d => Boolean(d)).sort((a, b) => (a > b ? 1 : -1));     
+    dealersList = data.map(([,,dealerID,dealerName]) => [dealerID,dealerName]).filter(([d]) => Boolean(d)).sort((a, b) => (a > b ? 1 : -1));     
+  }).getReferenceData();
+
+  // get vehicle data
+  google.script.run.withSuccessHandler(data => {
+    vehicleData = data;           
+    
+    afterDOMContentLoaded();
+    }).allVehicleData(); 
+});
+
+
+function afterDOMContentLoaded(){    
+  $('.head-title').addClass('active'); 
+  $('.card-container').css('opacity', 1);    
+  $('.card-container-inner' ).addClass('scale-in-center');
+  initSidebar(); 
+  
+  /* prepend home and profile views*/
+  const loginUser = `${activeUser.greet} ${activeUser.name.replace(/\b(\w)/g, c => c.toUpperCase())}`
+  const profile = `<div class="profile"> <span> ${activeUser.name[0].toUpperCase()} </span> </div`  
+  $('.user' ).text(loginUser);   
+  $('.nav-profile' ).prepend(profile);   
+  renderProfileMenu();
+
+  // $('#homeView' ).prepend(`<span class="home"><i class="fa fa-home"></i> </span>`); 
+  $('#loadSpinner').remove();
+   hadouken(); 
+}
+
+/* Guard against actions before required datasets load. */
+  ['homeView','failedImportView','dashboardView','addEditView','featuresDescriptionView'].forEach(el => {
+  document.getElementById(`${el}`).addEventListener('click',function(e) {
+     
+    if(
+      (!vehicleData && e.target.closest('#homeView')) || 
+      (!vehicleData && e.target.closest('#addEditView')) || 
+      (!vehicleData && e.target.closest('#featuresDescriptionView')) ||      
+      (!vehicleData && e.target.closest('#dashboardView')) ||  
+      (!vehicleData && e.target.closest('#failedImportView'))    
+      ) {
+       raiseAlert('warning','exclamation','triangle', 'Still loading data, please wait!');
+       hideAlert(3000);
+       return
+    }
+
+  })
+})
+ 
+ 
+ animateRingHeartBeat({
+   ringSelector: document.querySelector('.cta-ring'),
+   hBSelector: document.querySelector('.cta'),
+   ringOpacity: 1,
+   top:'10px',
+   scaleRing:1.5,
+   delay:0,
+   duration:3000,
+   iterations:Infinity
+ })
+
+
+// animate sidebar highligth 
+
+document.querySelector('#sidebar').addEventListener('mouseenter',function(e) {
+      e.target.classList.add('active')
+  })
+
+document.querySelector('#sidebar').addEventListener('mouseleave',function(e) {
+    e.target.classList.remove('active')
+})
+
+
+function hadouken() { 
+  $('#sidebar ul li:nth-of-type(1n + 2)').addClass('inactive');
+  const links = document.querySelectorAll('#sidebar > ul > li');
+  links[0].classList.add('active')   
+  links[0].querySelector('a > span:first-of-type').classList.add('span-no-bg')
+  let prev;
+
+  links.forEach((el,i) => {
+    el.addEventListener('click',function(e) {
+      links[0].classList.remove('active')
+      links[0].classList.add('inactive')
+      links[0].querySelector('a > span:first-of-type').classList.remove('span-no-bg')
+
+      links[prev]?.classList.remove('active')
+      links[prev]?.classList.add('inactive')
+      links[prev]?.querySelector('a > span:first-of-type').classList.remove('span-no-bg');
+         
+      this.classList.remove('inactive')    
+      this.classList.add('active')    
+      this.querySelector('a > span:first-of-type').classList.add('span-no-bg') 
+      prev = i
+    })
+  })
+}
+
+
+
+</script>

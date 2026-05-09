@@ -1,0 +1,223 @@
+  <script>  
+  // Failed-import module:
+  // - Renders failed import table + status counters
+  // - Wires edit/delete submenu actions
+  // - Saves row updates and re-renders table state
+  
+  function renderFailedImport(failedData) {  
+    //to rerender datatable 
+   $('#failed-import-table').DataTable().destroy();
+
+     const tBody = document.getElementById('failed-import-tbody');       
+     tBody.innerHTML = '';        
+    
+     const formatDate = date => new Date(date).toLocaleDateString('sv');
+
+     const markup =  failedData
+        .map(data => {         
+          return ` <tr>
+                    <td> ${data.dealer_id} </td> 
+                    <td> ${data.dealer_name} </td>                    
+                    <td> ${data.source_type.toUpperCase()} </td>                    
+                    <td> ${data.stock_number} </td>                    
+                    <td> ${data.fail_reason.replace(/\b(\w)/g, c=>c.toUpperCase())} </td> 
+                    <td> <span class="${data.status}"> ${data.status.toUpperCase()} <span></td>                    
+                    <td> ${data.added_by.replace(/\b(\w)/g, c=>c.toUpperCase())} </td>                                                          
+                    <td> ${formatDate(data.date_added)} </td> 
+                    <td  class="action-menu">                   
+                      <a href="#" class ="sM-lst" data-id="${data.id}" >
+                        <i class="fa fa-th"></i>                                                      
+                      </a>                       
+                    </td>                                                           
+                  </tr>                 
+              `;
+        })
+        .join('');
+      
+      tBody.insertAdjacentHTML('afterbegin',markup);    
+      dataTableFailedImport = loadDataTable('#failed-import-table');
+      dataTableFailedImport.draw()
+      //submenu 
+      renderSubmenu(document.getElementById('taskView'),dataTableFailedImport,'editFailedImportRowData', 'deleteFailedImportRowData'); 
+      
+      //stat      
+      const status = failedImportData.reduce((acc,{status}) => (acc[status] ? acc[status]++ : acc[status] = 1 ,acc), {})
+      const statusCounts= [status.pending, status.working, status.done].map(s => s ? s : 0);
+    
+      statusCounts.forEach((stat,i) => {
+        document.querySelectorAll(`.f-i-stat-table tr td:nth-of-type(2n)`)[i].textContent = stat
+      })
+
+      const percentDone = Math.round((status.done / failedImportData.length) * 100)
+
+      document.querySelector('.progress').setAttribute('stroke-dasharray',`${percentDone},100`);
+      document.querySelector('.percentage').textContent = percentDone;
+      renderCircularProgress();
+
+      animateRingHeartBeat({
+        ringSelector: document.querySelector('.start-ring-sm'),
+        hBSelector: document.querySelector('.circular-progress'),
+        ringOpacity: 0,
+        top:'10px',
+        scaleRing:1.3,
+        delay:0,
+        duration:5000,
+        iterations:1
+      })
+
+  }
+  
+  function renderFailedImportModal({dealersList,form}) {  
+    form.innerHTML =''
+    form.insertAdjacentHTML('afterbegin',failedImportInfo);
+
+    createDropdownOptions(dealersList.sort((a,b) => a[1] > b[1]? 1 : -1 ), form.elements.dealer_name);    
+
+   form.elements.dealer_name.addEventListener('change', function(e){
+     form.querySelector('.dealerID').textContent = ` (id: ${e.target.value})`
+   })  
+   
+  }
+
+
+  function afterSubmitFailedImportBtnClicked(form){
+    if (!validate(form.elements)) {
+      raiseAlert('danger', 'exclamation','circle', 'Please complete all fields!');
+      hideAlert(3000);
+      return;
+    } 
+
+    const data = {}
+    
+    data.id =  createId(failedImportData.map(({id}) =>  id), `failed`);
+    data.dealer_id = form.querySelector('.dealerID').textContent.replace(/\D/g,'')
+    data.dealer_name = form.querySelector('.dealer_name option:checked').text
+    data.source_type = form.elements.source_type.value
+    data.stock_number = form.elements.stock_number.value
+    data.year = form.elements.year.value
+    data.make = form.elements.make.value
+    data.model = form.elements.model.value
+    data.trim = form.elements.trim.value
+    data.fail_reason = form.elements.fail_reason.value
+    data.status = 'pending'
+    data.date_added = createTimeStamp();
+    data.added_by = activeUser.name   
+    data.date_edited =''
+    data.edited_by =''
+    data.audited ='No'
+    data.date_audited =''
+    data.note = form.elements.note.value
+    data.solution =''
+
+    failedImportData.push(data)    
+   
+    $('.modal-header').append('<div class="line__loader"></div>'); 
+
+     google.script.run.withSuccessHandler(()=> {
+
+        renderFailedImport(failedImportData);
+       $('.line__loader').fadeOut(300).delay(100).queue(function(){
+         $(this).remove().dequeue();
+        });         
+         
+        raiseAlert('success', 'check','circle', `Failed Data successfully added.`);
+        hideAlert(4000);           
+
+     }).saveFailedImport(data)
+  }
+
+  function editFailedImportRowData({id}) {
+    showModal('#editFailedImport',hideSubmenu,null); 
+    onCloseModal('#editFailedImport'); 
+    $('.modal-title').text('EDIT FAILED IMPORT');
+    $('.edit-failed-import-btn').attr('data-id',id);
+    
+    //render form data
+    const form = document.querySelector('.model-trim-content')   
+    const filteredData = failedImportData.filter(obj => obj.id === id);
+  
+
+    Object.entries(filteredData[0]).forEach(([key,val]) => {   
+      const input = form.elements[key]   
+       
+       if (input){
+         if(key ==='added_by' || key ==='edited_by' || key ==='source_type') input.value = val?.toUpperCase()        
+         else input.value = val 
+       }     
+    }); 
+
+    // dealer name dropdown
+    form.dealer_name.innerHTML =''
+    createDropdownOptions(dealersList.sort((a,b) => a[1] > b[1]? 1 : -1 ), form.elements.dealer_name); 
+
+    [...form.elements.dealer_name.options].forEach(option => {
+      if (option.innerText === filteredData[0].dealer_name)form.elements.dealer_name.value = option.value
+    })
+
+      form.elements.dealer_name.addEventListener('change', function(e){
+      form.elements.dealer_id.value = e.target.value
+    }) 
+    
+    //after edit-failed-import-btn
+     afterEditFailedButtonClicked(form);          
+  }
+  
+  // save edited failed import data
+  function afterEditFailedButtonClicked(form){
+     
+    $('.edit-failed-import-btn').unbind().click(function(e){ 
+
+    const dataID = e.target.dataset.id
+  
+    if(activeUser.isRestricted) {
+      alertRestrictedUser();
+      return;	
+    }  
+      
+      // get edited form data
+    const formData = [...form.elements].reduce((acc,el) => {
+      if(el.name==='dealer_name')  acc[el.name] = form.querySelector('.dealer_name option:checked').text 
+      else if(el.name==='added_by')  acc[el.name] =  el.value.toLowerCase()
+      else if(el.name==='date_edited')  acc[el.name] =  createTimeStamp()
+      else if(el.name==='edited_by')  acc[el.name] = activeUser.name       
+      else  acc[el.name] = el.value
+      return acc
+    },{})
+      
+     // update global variable
+     failedImportData.forEach(({id},i) => {       
+       if(id === dataID ) failedImportData[i] = {...formData,id}       
+     })
+                 
+    $('.modal-header').append('<div class="line__loader"></div>'); 
+  
+      google.script.run.withSuccessHandler(()=>{
+        $('.line__loader').fadeOut(300).delay(100).queue(function(){
+            $(this).remove().dequeue();
+        });
+
+        renderFailedImport(failedImportData) 
+
+        raiseAlert('success', 'check','circle', `Failed Data has been successfully updated!`);
+        hideAlert(3000);   
+      }).saveFailedImportChanges({id:dataID, data:formData});  
+    }) 
+  }
+
+
+  function deleteFailedImportRowData(element,table) { 
+    const {id} = element.dataset
+    const targetElement = element.closest('tr');
+    const tableTitle = $('#add-edit-view-section h6.table-title').text()   
+
+    deleteRowData(table,targetElement,'delete-failed-import-btn','deleteFailedImport',{id,tab:'Failed Import'}, updatefailedImportData);
+
+    function updatefailedImportData() {
+      // remove from global variable
+      failedImportData.forEach((arr,i) => {
+        if(arr['id'] === id ) failedImportData.splice(i,1)
+      })
+    }   
+  }
+
+</script>  

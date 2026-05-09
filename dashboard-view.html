@@ -1,0 +1,49 @@
+<!-- Dashboard shell:
+     - Navigation chips + chart container
+     - Monthly model audit chart/table are rendered by dashboard JS modules -->
+<nav id="dashboard-view-section">
+  <ul class="circular-progress-links">
+   <span class="line"></span> 
+   <span class="line-path"></span> 
+  </ul>
+</nav>
+<section>
+  <div class="mb-2" style="text-align:right;">
+    <label for="dashboard-year-filter" class="font-weight-bold mr-2">Year</label>
+    <select id="dashboard-year-filter" class="dashboard-year-filter"></select>
+  </div>
+  <fieldset class="fieldset-audit">
+    <legend class="legend-audit">Models </legend>
+      <div class="chart-wrapper">
+        <div>
+           <table class="table audit-stat-table">
+            <thead class="audit-stat-table-header">   
+              <tr>                 
+                <th>Months</th>
+                <th>Added</th> 
+                <th>Audited</th>
+              </tr>      
+            </thead>
+            <tbody id="audit-data-tbody">             
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-sec"> 
+          <canvas id="auditChart" width="300" height="300"></canvas>
+        </div>   
+      </div>
+  </fieldset> 
+</section>
+
+
+<!-- <center>
+  <div class="in-progress">
+    <h1> work in progress </h1>
+    <span  class="processing-spinner">
+      <div class="bounce1"></div>
+      <div class="bounce2"></div>
+      <div class="bounce3"></div>
+    </span>                
+  </div>  
+</center> -->
+

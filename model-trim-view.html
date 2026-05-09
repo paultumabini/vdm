@@ -1,0 +1,208 @@
+<!-- Model/Trim management view:
+     - Top action bar switches between model/trim tables
+     - Add modal handles insert workflow
+     - Edit modal handles update workflow -->
+<div id="add-edit-view-section">
+  <h6 class="table-title">ADDED MODELS</h6>
+  <div class="mt-3 action-buttons">
+    <button class="btn btn-info btn-sm view-model-btn">Load Model</button>
+    <button class="btn btn-info btn-sm view-trim-btn">Load Trim</button>
+    <button class="btn btn-info btn-sm add-model-trim-btn">Add</button>   
+    <button class="btn btn-info btn-sm fit-table-content-btn">Fit table view</button>   
+  </div> 
+  <center>
+    <table>
+      <tbody>
+        <tr>
+          <td class="make-dropdown" style="transform: none;">
+            <label class="font-weight-bold">Make </label>
+            <select class="make-filter">             
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </center>
+  <section class="view-content">
+  </section>
+</div>
+
+<!-- Add modal for creating new model/trim entries. -->
+<div class="modal fade" id="addModelTrim">
+    <div class="modal-dialog modalAddModelTrim modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title section-title"></h6>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            </div>
+            <div class="container"></div>
+            <div class="modal-body content">
+
+              <!-- add content -->
+              <div id="add-view-section">
+                <div class="form-group mt-4">
+                  <button class="btn btn-info btn-sm add-model-btn" >Add Model</button>
+                  <button class="btn btn-info btn-sm add-trim-btn" >Add Trim</button>
+                </div>
+                <form class="add-model-trim-content">
+                </form>                              
+              </div> 
+              <!--add content ends  -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-sm add-data-btn" >Save</button>               
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit modal for updating an existing row selected from action menu. -->
+<div class="modal fade" id="editModelTrim">
+  <div class="modal-dialog modalEditModelTrim modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"></h6>
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+      </div>
+      <div class="container"></div>
+      <div class="modal-body content">
+        <!-- add content -->
+        <form class="model-trim-content"> 
+           <div class="form-row">
+              <div class="form-group col-md-4 mb-2">
+                <label for="year"class="font-weight-bold" >Year</label>
+                <input name ="year" class="form-control year" disabled>                 
+              </div>
+              <div class="form-group col-md-4 mb-2">
+                <label for="make"class="font-weight-bold" >Make</label>
+                <input name ="make" class="form-control make" disabled>                 
+              </div>
+              <div class="form-group col-md-4 mb-2">
+                <label for="model" class="font-weight-bold" >Model</label>
+                <input type="text"name ="model" class="form-control model" required> 
+                <div class="invalid-feedback">
+                  Please add model
+                </div>
+              </div>
+            </div> 
+            <div class="form-row">
+              <div class="form-group col-md-5 mb-2">
+                <label for="trim" class="font-weight-bold" >Trim</label>
+                <input type="text" name ="trim" class="form-control trim" required> 
+                <div class="invalid-feedback">
+                  Please add trim
+                </div>
+              </div>
+              <div class="form-group col-md-5 mb-2">
+                <label for="model_code" class="font-weight-bold" >Model Code</label>
+                <input type="text" name ="model_code" class="form-control model_code" >                 
+              </div>
+              <div class="form-group col-md-2 mb-2">
+                <label for="package_code" class="font-weight-bold" >Package</label>
+                <input type="text" name ="package_code" class="form-control package_code" >                
+              </div>  
+            </div>
+            <div class="form-row">
+              <div class="form-group col-md-4 mb-2">
+                <label for="added_to_database" class="font-weight-bold" >Added to Database</label>
+                <select name ="added_to_database" class="form-control added_to_database" required>
+                  <option disabled selected hidden ></option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No </option>
+                </select>
+                <div class="invalid-feedback">
+                  Please select option
+                </div>
+              </div> 
+              <div class="form-group col-md-4 mb-2">
+                <label for="hot_features" class="font-weight-bold" >Hot Features Added</label>
+                <select name ="hot_features" class="form-control hot_features" required>
+                  <option disabled selected hidden ></option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No </option>
+                </select>
+                <div class="invalid-feedback">
+                  Please select option
+                </div>
+              </div> 
+              <div class="form-group col-md-4 mb-2">
+                <label for="description" class="font-weight-bold" >Description  Added</label>
+                <select name ="description" class="form-control description" required>
+                  <option disabled selected hidden ></option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No </option>
+                </select>
+                <div class="invalid-feedback">
+                  Please select option
+                </div>
+              </div>               
+            </div> 
+            <div class="form-row">
+              <div class="form-group col-md-12 mb-2">
+                <label for="note"  class="font-weight-bold" >Add Note</label>
+                <textarea name="note" class="form-control note" rows="2"></textarea>
+             </div>
+            </div> 
+            <div class="form-row">
+              <div class="form-group col-md-4 mb-2">
+                <label for="added_by" class="font-weight-bold" >Entered by</label>
+                <input type="text" name="added_by" class="form-control added_by" disabled >                 
+              </div>  
+              <div class="form-group col-md-4 mb-2">
+                <label for="date_added" class="font-weight-bold" >Date Entered</label>
+                <input type="text" name="date_added" class="form-control date_added" disabled>                 
+              </div>
+              <div class="form-group col-md-4 mb-2">
+                <label for="source" class="font-weight-bold" >Source</label>
+                <input type="text" name="source" class="form-control source" disabled >                 
+              </div>              
+            </div>
+            <div class="form-row">
+              <div class="form-group col-md-4 mb-2">
+                <label for="edited_by" class="font-weight-bold" >Edited by</label>
+                <input type="text" name="edited_by" class="form-control edited_by" disabled >                 
+              </div>              
+              <div class="form-group col-md-4 mb-2">
+                <label for="date_edited" class="font-weight-bold" >Date Edited</label>
+                <input type="text" name="date_edited" class="form-control date_edited" disabled>                 
+              </div>
+            </div>   
+            <div class="form-row">
+              <div class="form-group col-md-4 mb-2">
+                <label for="audited_by" class="font-weight-bold" >Audited by</label>
+                <input type="text" name="audited_by" class="form-control audited_by" disabled >                 
+              </div>              
+              <div class="form-group col-md-4 mb-2">
+                <label for="date_audited" class="font-weight-bold" >Date Audited</label>
+                <input type="text" name="date_audited" class="form-control date_audited" disabled>                 
+              </div>
+            </div>            
+        </form>
+        <!--add content ends  -->
+      </div>
+      <div class="modal-footer">  
+         <button class="btn btn-primary btn-sm mr-4 edit-model-trim-btn" >Save</button>      
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="immediateNotifyModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered  modal-sm" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title" align="left"></h6>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+          <div align="center" class="immediate-confirmation-msg"> 
+            Are you sure you want to fire notification immediately?
+          </div>
+        <button type="button" class="btn btn-primary btn-sm mr-3 mb-3 mt-3 immediate-notify-btn">Shoot</button>
+        </div>          
+      </div>
+    </div>
+  </div>

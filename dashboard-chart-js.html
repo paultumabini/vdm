@@ -1,0 +1,223 @@
+<script>
+// Dashboard chart module:
+// - Transforms monthly audit data into Chart.js datasets
+// - Renders chart + table summaries
+// - Supports drill-down and redraw without page reload
+let myChart
+let auditPercentage =[]
+
+const renderDashboardChart = ({dateAdded, values},auditPercentage, selectedYear) => {  
+  
+  const chartDatasets = setChartData(dateAdded, values)   
+  setChartTableData(chartDatasets,dateAdded,auditPercentage)    
+
+  if (myChart) myChart.destroy();
+
+  const ctx = document.getElementById('auditChart').getContext('2d');  
+
+  const labels = [...Object.entries(chartDatasets).map(([label]) => label)];
+
+  const gradientBackground = ctx.createLinearGradient(0, 0, 0, 400);
+  gradientBackground.addColorStop(0, 'rgba(93, 135, 158,1)');
+  gradientBackground.addColorStop(.8, 'rgba(93, 135, 158,0)');
+
+  const gradientBorder = ctx.createLinearGradient(0, 0, 0, 510);
+  gradientBorder.addColorStop(1, 'rgba(45, 174, 247,8)');  
+  
+  //audit % datasets
+  const auditPercentageDatasets = Object.entries(chartDatasets).map(([mon,{dateAdded, values}]) => {
+    return percentAudited(values)
+  })   
+
+  const data = {
+    labels: labels,
+    datasets: [{
+      label: `Year ${selectedYear || new Date().getFullYear()}`,
+      data: [...Object.entries(chartDatasets).map(([_,{dateAdded}]) => dateAdded.length)],
+      // data: [...auditPercentageDatasets],
+      backgroundColor: gradientBackground,
+      borderColor: gradientBorder,
+      backgroundColor: gradientBackground,
+      borderColor: gradientBorder,
+      pointBorderColor: '#0290b6',
+      pointBackgroundColor: '#fff',
+      pointHoverBackgroundColor: gradientBorder,
+      pointHoverBorderColor: gradientBorder,  
+      pointRadius: 4,  
+      borderWidth: 3,
+      tension: 0.4, 
+      fill: true,      
+    }]
+  }; 
+
+  const scales = {
+     y: {
+      // min: 0,
+      // max: 200,
+      color: '#9698ea', 
+      ticks: {
+        display: true,
+        beginAtZero: true,          
+        color: '#9698ea', 
+      },      
+      grid: {
+        display: true,
+        borderDash: [5, 5],
+        borderColor: 'rgba(0, 227, 251, .3)',
+        color:'rgba(0, 227, 251, .15)',
+      },
+    },   
+    xAxes: {
+      ticks: {
+        autoSkip: false,
+        color: '#9698ea',      
+      },
+      grid: {
+        display: true,
+        borderDash: [5, 5],
+        borderColor: 'rgba(0, 227, 251, .3)',
+        color:'rgba(0, 227, 251, .15)',
+      },    
+      title: {
+        display: true,
+        text: `Month`,
+        font: {
+          size: 12,
+          weight: 'bold',          
+        },
+        color: '#00e3fb',
+      },
+    },
+  }
+
+  const plugins = {
+    legend: {
+      labels: {
+        usePointStyle: true,
+        pointStyle: 'rectRounded',        
+        color: '#00e3fb',   //main label color  
+        font: {
+          size: 12,
+          weight: 'bold',
+          lineHeight: 1,
+        },       
+      },
+    },  
+    tooltip: {
+      callbacks:{
+        label:function({label,raw}){
+         return `Added: ${raw}`;
+        }
+      }      
+    }
+  }
+ 
+  const config = {
+    type: 'line',
+    data: data,
+    options: {
+       maintainAspectRatio: false, //control height     
+       responsive: true,
+       scales,  
+       plugins,
+       chartArea: {
+        backgroundColor: 'rgba(0, 0, 0, 1)'
+       }, 
+       transitions: {
+          show: {
+            animations: {
+              x: {
+                from: 0
+              },
+              y: {
+                from: 0
+              }
+            }
+          },
+          hide: {
+            animations: {
+              x: {
+                to: 0
+              },
+              y: {
+                to: 0
+              }
+            }
+          }
+       }
+    }
+  };  
+
+ 
+   myChart = new Chart(
+     ctx,
+     config
+  );
+   
+};
+
+function setChartData(dAdded, values) {  
+  const months = [...Array(12)].map((_,i) =>  new Date(0, i).toLocaleString('en-US', {month: 'short'}));
+  const {mObj, mArr} = months.reduce((acc,val,i) => (acc.mObj[i]=val, acc.mArr[val]={dateAdded:[],values:[]}, acc),{mObj:{},mArr:{}})  
+
+  return dAdded.reduce((acc,dateAdded,i) => {
+    Object.entries(mObj).forEach(([key,mon]) => {
+      if(new Date(dateAdded).getMonth() === +key){
+        acc[mon]['dateAdded'].push(dateAdded)
+        acc[mon]['values'].push(values[i])
+      }
+    })
+    return acc  
+  },{...mArr})  
+}
+
+function setChartTableData(data,added,auditPercentage){ 
+  const tBody = document.getElementById('audit-data-tbody');
+  tBody.innerHTML=''
+
+  const markup =  Object.entries(data)
+   .map(([mon,{dateAdded, values}]) => {    
+
+    const auditPercent = percentAudited(values)    
+    
+    return ` <tr>
+          <td> ${mon} </td> 
+          <td align="center"> ${dateAdded.length} </td> 
+          <td align="center" ${
+            dateAdded.length
+            ? (
+               auditPercent >= 90 
+              ? `style="color:#29a329;"` 
+              : auditPercent < 90 && auditPercent >= 50 
+              ? `style="color:#007bff;"` 
+              : `style="color:#dc3545;"`
+            )
+            : `style="color:#6c757d;"`
+            } 
+            > ${auditPercent}% 
+            </td>  
+        </tr>                 
+    `;
+    })
+    .join('');
+
+  tBody.insertAdjacentHTML('afterbegin',markup);
+  
+  tBody.insertAdjacentHTML('beforeend', 
+     ` <tr>
+          <td class="font-weight-bold"> TOTAL </td> 
+          <td align="center" class="font-weight-bold"> ${added.length} </td> 
+          <td align="center" class="font-weight-bold"> ${auditPercentage}% </td>  
+        </tr> `   
+  )  
+}
+
+function percentAudited(audited) {
+  const count = audited.reduce((acc, val) => (acc[val] = acc[val] + 1 || 1, acc), {})
+  const total = (count?.Yes ?? 0)  + (count?.No ?? 0)  
+
+  return Math.trunc(((count?.Yes ?? 0) ? (count?.Yes ?? 0) / total : 0) * 100)
+}
+
+
+</script>

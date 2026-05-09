@@ -1,0 +1,42 @@
+<!-- Notification preference modal:
+     - Lets user choose disabled/immediate/preferred modes
+     - Preferred mode day/time controls are injected dynamically by notify-js.html -->
+<div class="modal fade" id="notifyMe">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title "></h6>
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+      </div>
+      <div class="container"></div>
+      <div class="modal-body content-notification">
+          <!--  content -->
+        <form class="notification-content">
+          <fieldset class="fieldset-notification">
+            <legend class="legend-notification">Hot Features & Description
+              <i style="position:relative; top: -5px;"
+               class="fa fa-question-circle fa-1x red-tooltip" data-placement="top" data-toggle="tooltip" data-original-title="Set this notification if you want to get notified with newly added units that need the hot features or description.">
+               </i>
+            </legend>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="notificationOptions" id="disabled" value="option1">
+                <label class="form-check-label" for="disabled">Disabled</label>
+              </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="notificationOptions" id="immediate" value="option2">
+                <label class="form-check-label" for="immediate">Set right after adding new units (<em>recommended</em>)</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="notificationOptions" id="preferred" value="option1">
+                <label class="form-check-label" for="preferred">Schedule time and day</label>
+            </div>                 
+          </fieldset>
+        </form>      
+        <!-- content ends  -->
+      </div>
+      <div class="modal-footer">   
+        <button type="submit" class="btn btn-primary btn-sm set-notification-btn" >Save</button>      
+      </div>
+    </div>
+  </div>
+</div>

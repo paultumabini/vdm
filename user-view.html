@@ -1,0 +1,60 @@
+<!-- Profile modal markup:
+     - Section 1 updates username/email
+     - Section 2 updates password (current + new + confirm)
+     - Footer displays last login timestamp -->
+<div class="modal fade" id="profileView">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title "></h6>
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+      </div>
+      <div class="container"></div>
+      <div class="modal-body content">
+
+        <!-- add content -->
+        <form class="profile-content mb-5 mt-4">          
+          <section class="username-email-section">                  
+            <div class="form-group">
+              <label for="username" class="font-weight-bold">Username</label>              
+              <input type="text" name="username" class="form-control username" required>                
+            </div>
+            <div class="form-group">
+              <label for="email" class="font-weight-bold">Email</label>
+              <input type="text" name="email" class="form-control email" required>                
+            </div>
+            <button type="submit" name="usernameEmailBtn" class="btn btn-primary btn-sm usernameEmailBtn">Save</button>
+          </section>     
+          <hr/>    
+          <section class="password-section"> 
+            <div align="center">CHANGE PASSWORD</div>
+            <div class="form-group">
+              <label for="currentPassword" class="font-weight-bold" >Current Password</label>
+              <input type="password" name="currentPassword" class="form-control currentPassword" required>
+            </div> 
+            <div class="form-group">
+              <label for="password1" class="font-weight-bold">New Password</label>
+              <input type="password" name="password1" class="form-control password1" required>               
+            </div>  
+            <div class="form-group">
+              <label for="password2" class="font-weight-bold">Confirm New Password</label>
+              <input type="password" name="password2" class="form-control password2" required>
+            </div> 
+            <div class= "text-password">
+              <input type="checkbox" id="show-pass" name="show-pass" >
+              <label for="show-pass" ><small>Show password</small></label>
+            </div> 
+            <button type="submit" name="passwordBtn" class="btn btn-primary btn-sm passwordBtn" >Save</button>
+          </section>                        
+        </form>
+
+        <!--add content ends  -->
+      </div>
+      <div class="modal-footer">   
+        <div class="footer-last-logged-in"> Last logged in:
+           <span class="last-logged"></span>
+        </div>     
+      </div>
+    </div>
+  </div>
+</div>
